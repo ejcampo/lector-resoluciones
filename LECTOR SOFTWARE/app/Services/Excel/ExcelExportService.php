@@ -134,13 +134,15 @@ class ExcelExportService {
 
         // Inicializar con el ancho de los encabezados
         foreach ($headers as $i => $header) {
-            $anchos[$i] = mb_strlen($header) + 4; // Margen adicional
+            $len = function_exists('mb_strlen') ? mb_strlen($header) : strlen($header);
+            $anchos[$i] = $len + 4; // Margen adicional
         }
 
         // Comparar con el contenido de cada fila
         foreach ($rows as $row) {
             foreach ($row as $i => $cell) {
-                $cellLen = mb_strlen((string)$cell);
+                $cellStr = (string)$cell;
+                $cellLen = function_exists('mb_strlen') ? mb_strlen($cellStr) : strlen($cellStr);
                 // Limitar el ancho máximo para evitar columnas excesivamente anchas
                 $cellLen = min($cellLen + 2, 80);
                 if ($cellLen > $anchos[$i]) {

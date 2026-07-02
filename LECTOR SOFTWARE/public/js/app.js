@@ -2,6 +2,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // State
     let selectedFiles = [];
     let isUploading = false;
+    const API_BASE_URL = window.location.port === '5000'
+        ? 'http://127.0.0.1:5001'
+        : '';
+
+    function apiUrl(path) {
+        return `${API_BASE_URL}${path}`;
+    }
     let extractionResults = []; // Almacena los resultados de la última extracción para exportar
 
     // DOM Elements
@@ -18,6 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressBar = document.getElementById('progress-bar');
     const statsText = document.getElementById('stats-text');
     const selectedCount = document.getElementById('selected-count');
+    
+    // Pagination Elements
+    const paginationContainer = document.getElementById('pagination-container');
+    const btnPrevPage = document.getElementById('btn-prev-page');
+    const btnNextPage = document.getElementById('btn-next-page');
+    const pageInfo = document.getElementById('page-info');
+
+    // Pagination State
+    let currentPage = 1;
+    const itemsPerPage = 5;
 
     // Create Toast Container dynamically
     const toastContainer = document.createElement('div');
@@ -247,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // PASO 1: Subir archivos al servidor
         // ──────────────────────────────────────────────────────
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/upload', true);
+        xhr.open('POST', apiUrl('/api/upload'), true);
 
         xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
@@ -268,14 +285,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         emptyState.style.display = 'none';
                         tableBody.innerHTML = '';
 
-                        response.files.forEach(file => {
+                        response.files.forEach((file, index) => {
                             const row = document.createElement('tr');
+                            const fileName = file.name || file.archivo || 'Documento PDF';
                             row.innerHTML = `
-                                <td style="font-weight: 500;">${file.name}</td>
+                                <td style="color: var(--text-secondary); font-weight: 500;">${index + 1}</td>
+                                <td style="font-weight: 500;">${fileName}</td>
                                 <td><div class="cell-loading"><div class="spinner-sm"></div> Procesando...</div></td>
                                 <td><div class="cell-loading"><div class="spinner-sm"></div> Procesando...</div></td>
                                 <td><div class="cell-loading"><div class="spinner-sm"></div> Procesando...</div></td>
                                 <td><span class="badge badge-processing">Procesando</span></td>
+                                <td><div class="cell-loading">...</div></td>
                             `;
                             tableBody.appendChild(row);
                         });
@@ -289,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // ──────────────────────────────────────────────────────
                         // PASO 2: Ejecutar el pipeline de extracción inteligente
                         // ──────────────────────────────────────────────────────
-                        runExtraction();
+                        runExtraction(response.files);
                     } else {
                         resetProcessButton();
                         showToast(response.error || 'Ocurrió un error al cargar los archivos.', 'error');
@@ -315,8 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         xhr.onerror = function() {
             resetProcessButton();
-            showToast('Error de red al intentar conectarse al servidor.', 'error');
-            statsText.textContent = 'Error de red.';
+            showToast('La API PHP no esta iniciada. Abre iniciar-live-server-con-api.bat y vuelve a procesar.', 'error');
+            statsText.textContent = 'API PHP apagada.';
         };
 
         xhr.send(formData);
@@ -326,15 +346,19 @@ document.addEventListener('DOMContentLoaded', () => {
      * Ejecuta el pipeline completo de extracción: Conversión → OCR → Extracción.
      * Llama a POST /api/extract y renderiza los resultados en la tabla.
      */
-    function runExtraction() {
+    function runExtraction(filesToExtract = []) {
         procesarBtn.innerHTML = '<div class="spinner"></div> Extrayendo datos...';
         progressContainer.style.display = 'block';
         progressBar.style.width = '100%';
         progressBar.classList.add('progress-indeterminate');
 
-        fetch('/api/extract', {
+        fetch(apiUrl('/api/extract'), {
             method: 'POST',
-            headers: { 'Accept': 'application/json' }
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ files: filesToExtract })
         })
         .then(response => response.json())
         .then(data => {
@@ -368,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Actualizar tabla con error general
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="5" style="text-align: center; color: var(--danger); padding: 2rem;">
+                        <td colspan="7" style="text-align: center; color: var(--danger); padding: 2rem;">
                             Error: ${data.error || 'No se pudieron procesar los documentos.'}
                         </td>
                     </tr>
@@ -385,13 +409,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Renderiza los resultados de extracción en la tabla de resultados.
+     * Prepara la vista de resultados e inicializa la paginación.
      */
     function renderExtractionResults(results) {
+        if (results.length === 0) {
+            emptyState.style.display = 'flex';
+            tableBody.innerHTML = '';
+            paginationContainer.style.display = 'none';
+            return;
+        }
+        
         emptyState.style.display = 'none';
+        currentPage = 1;
+        renderTablePage(currentPage);
+    }
+
+    /**
+     * Renderiza una página específica de los resultados en la tabla.
+     */
+    function renderTablePage(page) {
+        const totalPages = Math.ceil(extractionResults.length / itemsPerPage);
+        
+        // Validar límites de página
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+        
+        currentPage = page;
+        
+        // Calcular índices
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, extractionResults.length);
+        
+        // Obtener subconjunto de resultados
+        const pageResults = extractionResults.slice(startIndex, endIndex);
+        
         tableBody.innerHTML = '';
 
-        results.forEach(result => {
+        pageResults.forEach((result, index) => {
+            // El índice global (1-based) para la columna #
+            const globalIndex = startIndex + index + 1;
+            
             const row = document.createElement('tr');
             const isOk = result.estado === 'OK';
             
@@ -414,13 +471,21 @@ document.addEventListener('DOMContentLoaded', () => {
             // Badge de estado
             const badgeClass = isOk ? 'badge-success' : 'badge-error';
             const badgeText = isOk ? 'OK' : 'Error';
+            
+            // Enlace al PDF original
+            const pdfUrl = result.archivo ? apiUrl(`/api/view-pdf?file=${encodeURIComponent(result.archivo)}`) : '#';
+            const actionBtn = result.archivo 
+                ? `<a href="${pdfUrl}" target="_blank" class="btn btn-secondary btn-sm" title="Ver PDF Original" style="text-decoration: none;">Ver PDF</a>`
+                : `<span style="color: var(--text-muted); font-size: 0.8rem;">No disp.</span>`;
 
             row.innerHTML = `
+                <td style="color: var(--text-secondary); font-weight: 500;">${globalIndex}</td>
                 <td style="font-weight: 500;" title="${escapeHtml(result.archivo || '')}">${displayName}</td>
                 <td ${numResClass}><span class="resolution-number">${escapeHtml(numRes)}</span></td>
                 <td class="paragraph-cell" ${parrafoAttr}>${escapeHtml(parrafoDisplay)}</td>
                 <td ${firmanteClass}>${escapeHtml(firmante)}</td>
                 <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                <td>${actionBtn}</td>
             `;
 
             // Si hay error, añadir tooltip con el mensaje
@@ -431,7 +496,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tableBody.appendChild(row);
         });
+        
+        // Actualizar controles de paginación
+        if (totalPages > 1) {
+            paginationContainer.style.display = 'flex';
+            pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+            btnPrevPage.disabled = currentPage === 1;
+            btnNextPage.disabled = currentPage === totalPages;
+        } else {
+            paginationContainer.style.display = 'none';
+        }
     }
+
+    // Eventos de Paginación
+    btnPrevPage.addEventListener('click', () => {
+        if (currentPage > 1) {
+            renderTablePage(currentPage - 1);
+        }
+    });
+
+    btnNextPage.addEventListener('click', () => {
+        const totalPages = Math.ceil(extractionResults.length / itemsPerPage);
+        if (currentPage < totalPages) {
+            renderTablePage(currentPage + 1);
+        }
+    });
 
     /**
      * Limpia el nombre del archivo eliminando el prefijo timestamp_uniqid_ del servidor.
@@ -484,7 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const originalContent = exportBtn.innerHTML;
         exportBtn.innerHTML = '<div class="spinner" style="border-top-color: var(--success-color); border-color: rgba(16,185,129,0.3);"></div> Generando...';
 
-        fetch('/api/export', {
+        fetch(apiUrl('/api/export'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -538,4 +627,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-

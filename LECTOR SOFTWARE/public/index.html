@@ -125,17 +125,26 @@
                     <table>
                         <thead>
                             <tr>
+                                <th style="width: 5%;">#</th>
                                 <th style="width: 20%;">Archivo</th>
-                                <th style="width: 20%;">Número de resolución</th>
-                                <th style="width: 35%;">Primer párrafo</th>
-                                <th style="width: 15%;">Firmante</th>
-                                <th style="width: 10%;">Estado</th>
+                                <th style="width: 15%;">Número de resolución</th>
+                                <th style="width: 30%;">Primer párrafo</th>
+                                <th style="width: 12%;">Firmante</th>
+                                <th style="width: 8%;">Estado</th>
+                                <th style="width: 10%;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="results-table-body">
                             <!-- Rows will be injected by JavaScript -->
                         </tbody>
                     </table>
+
+                    <!-- Pagination Controls -->
+                    <div class="pagination-container" id="pagination-container" style="display: none; justify-content: center; align-items: center; padding: 1rem; gap: 1rem; border-top: 1px solid var(--border-color);">
+                        <button class="btn btn-secondary" id="btn-prev-page" disabled>&laquo; Anterior</button>
+                        <span id="page-info" style="font-size: 0.9rem; font-weight: 500;">Página 1 de 1</span>
+                        <button class="btn btn-secondary" id="btn-next-page" disabled>Siguiente &raquo;</button>
+                    </div>
                     
                     <!-- Empty State Placeholder -->
                     <div class="empty-state" id="empty-state">

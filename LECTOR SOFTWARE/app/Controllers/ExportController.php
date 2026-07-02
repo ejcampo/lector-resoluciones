@@ -85,7 +85,7 @@ class ExportController {
             // Enviar el archivo directamente como descarga
             $this->excelService->descargar($exportResult['filepath'], $exportResult['filename']);
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             header('Content-Type: application/json; charset=utf-8');
             http_response_code(500);
             echo json_encode([

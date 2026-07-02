@@ -14,7 +14,6 @@ class CleanupService {
 
     /** @var string[] Directorios temporales a limpiar tras el procesamiento */
     private array $processingDirs = [
-        'uploads',
         'images',
         'ocr',
     ];

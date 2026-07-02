@@ -70,4 +70,34 @@ class BatchPdfToImageService {
 
         return $results;
     }
+
+    public function processFiles(array $fileNames): array {
+        $results = [];
+        $uniqueFiles = array_values(array_unique(array_map('basename', $fileNames)));
+
+        foreach ($uniqueFiles as $file) {
+            if ($file === '' || strtolower(pathinfo($file, PATHINFO_EXTENSION)) !== 'pdf') {
+                continue;
+            }
+
+            try {
+                $conversion = $this->pdfToImageService->convert($file);
+
+                $results[] = [
+                    'archivo' => $conversion['archivo'],
+                    'cantidad_paginas' => $conversion['cantidad_paginas'],
+                    'imagenes_generadas' => $conversion['imagenes_generadas'],
+                    'estado' => $conversion['estado']
+                ];
+            } catch (Exception $e) {
+                $results[] = [
+                    'archivo' => $file,
+                    'error' => "Fallo al convertir: " . $e->getMessage(),
+                    'estado' => 'Error'
+                ];
+            }
+        }
+
+        return $results;
+    }
 }

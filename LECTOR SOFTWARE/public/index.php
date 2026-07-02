@@ -20,6 +20,25 @@ spl_autoload_register(function ($class) {
     }
 });
 
+// Permitir que Live Server (puerto 5000) consuma la API PHP si corre en otro puerto.
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$allowedOrigins = [
+    'http://127.0.0.1:5000',
+    'http://localhost:5000',
+];
+
+if (in_array($origin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Vary: Origin');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Accept');
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
 // Obtener la ruta limpia de la solicitud
 $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
@@ -52,6 +71,24 @@ if ($requestUri === '/api/export') {
     $controller = new \App\Controllers\ExportController();
     $controller->handleExport();
     exit;
+}
+
+if ($requestUri === '/api/view-pdf') {
+    $file = $_GET['file'] ?? '';
+    // Prevent directory traversal
+    $file = basename($file);
+    $pdfPath = dirname(__DIR__) . '/storage/temp/uploads/' . $file;
+    
+    if ($file !== '' && file_exists($pdfPath)) {
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $file . '"');
+        readfile($pdfPath);
+        exit;
+    } else {
+        http_response_code(404);
+        echo "PDF no encontrado.";
+        exit;
+    }
 }
 
 // Servir la página estática index.html si se solicita la raíz

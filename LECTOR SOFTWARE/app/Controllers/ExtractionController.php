@@ -40,6 +40,8 @@ class ExtractionController {
      * Responde en JSON con los datos extraídos de cada documento.
      */
     public function handleExtract(): void {
+        @set_time_limit(0);
+        @ini_set('max_execution_time', '0');
         header('Content-Type: application/json; charset=utf-8');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -52,8 +54,23 @@ class ExtractionController {
         }
 
         try {
-            // Paso 1: Convertir todos los PDFs a imágenes
-            $conversionResults = $this->batchService->processAll();
+            $payload = json_decode(file_get_contents('php://input') ?: '{}', true);
+            $requestedFiles = [];
+
+            if (is_array($payload) && isset($payload['files']) && is_array($payload['files'])) {
+                foreach ($payload['files'] as $file) {
+                    $name = is_array($file) ? ($file['archivo'] ?? $file['name'] ?? '') : (string) $file;
+
+                    if ($name !== '') {
+                        $requestedFiles[] = basename($name);
+                    }
+                }
+            }
+
+            // Paso 1: Convertir solo el lote solicitado. Si no llega lote, conservar compatibilidad.
+            $conversionResults = !empty($requestedFiles)
+                ? $this->batchService->processFiles($requestedFiles)
+                : $this->batchService->processAll();
 
             if (empty($conversionResults)) {
                 http_response_code(200);
