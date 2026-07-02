@@ -1,0 +1,23 @@
+{
+    "generado_en": "2026-07-02 14:08:22",
+    "debug_mode": true,
+    "tiempo_total_pipeline_ms": 10164.74,
+    "total_documentos": 1,
+    "documentos": [
+        {
+            "archivo": "1783001289_6a4670c9b79c3_RS-05285-06-2026.pdf",
+            "cantidad_paginas": 7,
+            "imagenes_generadas": 7,
+            "estado_conversion": "Completado",
+            "error_conversion": null,
+            "tiempo_ocr_ms": 7729.46,
+            "estado_final": "OK",
+            "error_final": null,
+            "datos_extraidos": {
+                "numero_resolucion": "05285-06-2026",
+                "primer_parrafo": "LA SECRETARIA DE EDUCACIÓN Y CULTURA DEL DEPARTAMENTO DEL CAUCA, en ejerciciode sus atribuciones legales, de conformidadcon lo establecidoen la Ley 115 de 1994, Sentencia SU 245 del 2021, Decreto 1345 del 2023, Decreto 0300 del 2026 y las contenidasen el Decreto Departamental No. 0142 del 17 de febrerode 2025, y",
+                "firmante": "Proyectoy revisó documentos: Nohem# Embus Palomino Gestió"
+            }
+        }
+    ]
+}
