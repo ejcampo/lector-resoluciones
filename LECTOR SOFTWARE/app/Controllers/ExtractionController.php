@@ -7,6 +7,7 @@ use App\Services\OCR\OCRService;
 use App\Services\Extraction\ResolutionExtractor;
 use App\Services\File\CleanupService;
 use App\Services\Debug\DebugService;
+use App\Repositories\ResolutionRepository;
 use App\Helpers\AppConfig;
 use Exception;
 
@@ -26,6 +27,7 @@ class ExtractionController {
     private ResolutionExtractor $extractor;
     private CleanupService $cleanupService;
     private DebugService $debugService;
+    private ResolutionRepository $resolutionRepository;
 
     public function __construct() {
         $this->batchService = new BatchPdfToImageService();
@@ -33,6 +35,7 @@ class ExtractionController {
         $this->extractor = new ResolutionExtractor();
         $this->cleanupService = new CleanupService();
         $this->debugService = new DebugService();
+        $this->resolutionRepository = new ResolutionRepository();
     }
 
     /**
@@ -122,6 +125,8 @@ class ExtractionController {
                 $this->debugService->generarReporte();
             }
 
+            $databaseResult = $this->resolutionRepository->saveMany($extractionResults);
+
             // Paso 4: Limpiar archivos temporales (SOLO si DEBUG está desactivado)
             $cleanupResult = ['eliminados' => 0, 'errores' => 0];
             if (!AppConfig::isDebug()) {
@@ -135,7 +140,8 @@ class ExtractionController {
                 'cleanup' => [
                     'archivos_eliminados' => $cleanupResult['eliminados'],
                     'errores' => $cleanupResult['errores']
-                ]
+                ],
+                'database' => $databaseResult
             ];
 
             // Indicar al frontend que el modo debug está activo

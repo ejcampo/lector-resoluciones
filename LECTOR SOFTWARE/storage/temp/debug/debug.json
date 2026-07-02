@@ -1,16 +1,16 @@
 {
-    "generado_en": "2026-07-02 15:04:59",
+    "generado_en": "2026-07-02 16:54:56",
     "debug_mode": true,
-    "tiempo_total_pipeline_ms": 8643.37,
+    "tiempo_total_pipeline_ms": 8472.84,
     "total_documentos": 1,
     "documentos": [
         {
-            "archivo": "1783004688_6a467e101c0a6_RS-05286-06-2026.pdf",
+            "archivo": "1783011285_6a4697d57436d_RS-05286-06-2026.pdf",
             "cantidad_paginas": 7,
             "imagenes_generadas": 7,
             "estado_conversion": "Completado",
             "error_conversion": null,
-            "tiempo_ocr_ms": 6210.18,
+            "tiempo_ocr_ms": 5981.68,
             "estado_final": "OK",
             "error_final": null,
             "datos_extraidos": {
