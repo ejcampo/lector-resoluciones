@@ -78,22 +78,23 @@ class DebugService {
         if (!empty($imagenes)) {
             $primeraImagen = $imagenes[0];
             $ultimaImagen = $imagenes[count($imagenes) - 1];
+            $imgExt = pathinfo($primeraImagen, PATHINFO_EXTENSION) ?: 'jpg';
 
             $this->copiarArchivoSeguro(
                 $primeraImagen,
-                $this->debugDir . $nombreBase . '_primera_pagina.png'
+                $this->debugDir . $nombreBase . '_primera_pagina.' . $imgExt
             );
 
             if (count($imagenes) > 1) {
                 $this->copiarArchivoSeguro(
                     $ultimaImagen,
-                    $this->debugDir . $nombreBase . '_ultima_pagina.png'
+                    $this->debugDir . $nombreBase . '_ultima_pagina.' . $imgExt
                 );
             } else {
                 // Si solo hay una página, copiarla también como última
                 $this->copiarArchivoSeguro(
                     $primeraImagen,
-                    $this->debugDir . $nombreBase . '_ultima_pagina.png'
+                    $this->debugDir . $nombreBase . '_ultima_pagina.' . $imgExt
                 );
             }
         }
