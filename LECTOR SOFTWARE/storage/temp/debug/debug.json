@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
     "generado_en": "2026-07-02 16:20:32",
     "debug_mode": true,
     "tiempo_total_pipeline_ms": 33946.32,
@@ -6,11 +7,24 @@
     "documentos": [
         {
             "archivo": "1783009195_6a468fab97809_RS-05285-06-2026.pdf",
+=======
+    "generado_en": "2026-07-02 16:54:56",
+    "debug_mode": true,
+    "tiempo_total_pipeline_ms": 8472.84,
+    "total_documentos": 1,
+    "documentos": [
+        {
+            "archivo": "1783011285_6a4697d57436d_RS-05286-06-2026.pdf",
+>>>>>>> 334a34d5bccafd8e5b03f7d6ec91e7073a012674
             "cantidad_paginas": 7,
             "imagenes_generadas": 2,
             "estado_conversion": "Completado",
             "error_conversion": null,
+<<<<<<< HEAD
             "tiempo_ocr_ms": 31123.46,
+=======
+            "tiempo_ocr_ms": 5981.68,
+>>>>>>> 334a34d5bccafd8e5b03f7d6ec91e7073a012674
             "estado_final": "OK",
             "error_final": null,
             "datos_extraidos": {

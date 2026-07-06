@@ -378,6 +378,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 let statsMsg = `${data.results.length} documento(s) procesado(s)`;
                 if (okCount > 0) statsMsg += ` · ${okCount} exitoso(s)`;
                 if (errCount > 0) statsMsg += ` · ${errCount} con error`;
+                if (data.database) {
+                    statsMsg += data.database.enabled
+                        ? ` · BD guardada (${data.database.saved})`
+                        : ' · BD pendiente';
+                }
                 statsText.textContent = statsMsg;
 
                 if (okCount > 0) {
