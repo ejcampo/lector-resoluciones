@@ -42,7 +42,7 @@ class ResolutionRepository {
                 firmante = EXCLUDED.firmante,
                 estado = EXCLUDED.estado,
                 mensaje = EXCLUDED.mensaje,
-                updated_at = CURRENT_TIMESTAMP
+                actualizado_en = CURRENT_TIMESTAMP
         ';
 
         $stmt = $pdo->prepare($sql);

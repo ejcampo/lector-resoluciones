@@ -1,48 +1,22 @@
 {
-<<<<<<< HEAD
-    "generado_en": "2026-07-06 13:28:06",
-=======
-<<<<<<< HEAD
-    "generado_en": "2026-07-02 16:20:32",
+    "generado_en": "2026-07-06 13:40:01",
     "debug_mode": true,
-    "tiempo_total_pipeline_ms": 33946.32,
+    "tiempo_total_pipeline_ms": 10870.62,
     "total_documentos": 1,
     "documentos": [
         {
-            "archivo": "1783009195_6a468fab97809_RS-05285-06-2026.pdf",
-=======
-    "generado_en": "2026-07-02 16:54:56",
->>>>>>> 4926dd8e29f7141e76bbd08a8224f1c47a45b3ae
-    "debug_mode": true,
-    "tiempo_total_pipeline_ms": 11717.79,
-    "total_documentos": 1,
-    "documentos": [
-        {
-<<<<<<< HEAD
-            "archivo": "1783344472_6a4bad583f7de_RS-05285-06-2026.pdf",
-=======
-            "archivo": "1783011285_6a4697d57436d_RS-05286-06-2026.pdf",
->>>>>>> 334a34d5bccafd8e5b03f7d6ec91e7073a012674
->>>>>>> 4926dd8e29f7141e76bbd08a8224f1c47a45b3ae
-            "cantidad_paginas": 7,
+            "archivo": "1783345188_6a4bb024b2e30_DC-0532-06-2026.pdf",
+            "cantidad_paginas": 2,
             "imagenes_generadas": 2,
             "estado_conversion": "Completado",
             "error_conversion": null,
-<<<<<<< HEAD
-            "tiempo_ocr_ms": 8787.89,
-=======
-<<<<<<< HEAD
-            "tiempo_ocr_ms": 31123.46,
-=======
-            "tiempo_ocr_ms": 5981.68,
->>>>>>> 334a34d5bccafd8e5b03f7d6ec91e7073a012674
->>>>>>> 4926dd8e29f7141e76bbd08a8224f1c47a45b3ae
+            "tiempo_ocr_ms": 9183.97,
             "estado_final": "OK",
             "error_final": null,
             "datos_extraidos": {
-                "numero_resolucion": "05285-06-2026",
-                "primer_parrafo": "LA SECRETARIA DE EDUCACIÓN Y CULTURA DEL DEPARTAMENTO DEL CAUCA, en ejerciciode sus atribuciones legales, de conformidadcon lo establecidoen la Ley 115 de 1994, Sentencia SU 245 del 2021, Decreto 1345 del 2023, Decreto 0300 del 2026 y las contenidasen el Decreto Departamental No. 0142 del 17 de febrerode 2025, y",
-                "firmante": "Proyectoy revisó documentos: Nohem# Embus Palomino Gestió"
+                "numero_resolucion": "0532-06-2026",
+                "primer_parrafo": "",
+                "firmante": "Proyectó: Nolberto J. Rojas. contratista Gestiondel Talento Humano Educativo seo"
             }
         }
     ]

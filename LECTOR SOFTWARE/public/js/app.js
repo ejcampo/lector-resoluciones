@@ -1,4 +1,107 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Auth State and Elements
+    const loginScreen = document.getElementById('login-screen');
+    const loginForm = document.getElementById('login-form');
+    const loginEmailInput = document.getElementById('login-email');
+    const loginPasswordInput = document.getElementById('login-password');
+    const loginSubmitBtn = document.getElementById('btn-login-submit');
+    const userProfileHeader = document.getElementById('user-profile-header');
+    const headerUserName = document.getElementById('header-user-name');
+    const headerUserRole = document.getElementById('header-user-role');
+    const logoutBtn = document.getElementById('btn-logout');
+
+    let currentUser = null;
+
+    function checkAuth() {
+        const storedUser = localStorage.getItem('usuario_logeado');
+        if (storedUser) {
+            try {
+                currentUser = JSON.parse(storedUser);
+                applyAuthenticatedUI();
+            } catch (e) {
+                localStorage.removeItem('usuario_logeado');
+                applyLoggedOutUI();
+            }
+        } else {
+            applyLoggedOutUI();
+        }
+    }
+
+    function applyAuthenticatedUI() {
+        if (loginScreen) loginScreen.classList.add('hidden');
+        if (userProfileHeader) userProfileHeader.style.display = 'flex';
+        if (headerUserName) headerUserName.textContent = currentUser.nombre_completo || 'Usuario';
+        if (headerUserRole) headerUserRole.textContent = currentUser.correo || 'admin';
+    }
+
+    function applyLoggedOutUI() {
+        if (loginScreen) loginScreen.classList.remove('hidden');
+        if (userProfileHeader) userProfileHeader.style.display = 'none';
+        currentUser = null;
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const correo = loginEmailInput.value.trim();
+            const contrasena = loginPasswordInput.value;
+
+            if (!correo || !contrasena) {
+                showToast('Por favor, ingresa tu correo y contraseña.', 'error');
+                return;
+            }
+
+            loginSubmitBtn.disabled = true;
+            loginSubmitBtn.innerHTML = '<div class="spinner" style="display:inline-block; vertical-align:middle; margin-right:5px;"></div> Verificando...';
+
+            fetch(apiUrl('/api/login'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ correo, contrasena })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || 'Credenciales incorrectas.');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                loginSubmitBtn.disabled = false;
+                loginSubmitBtn.textContent = 'Iniciar Sesión';
+                
+                if (data.success && data.user) {
+                    localStorage.setItem('usuario_logeado', JSON.stringify(data.user));
+                    currentUser = data.user;
+                    applyAuthenticatedUI();
+                    showToast(`¡Bienvenido de nuevo, ${currentUser.nombre_completo}!`, 'success');
+                } else {
+                    showToast(data.error || 'Error al iniciar sesión.', 'error');
+                }
+            })
+            .catch(err => {
+                loginSubmitBtn.disabled = false;
+                loginSubmitBtn.textContent = 'Iniciar Sesión';
+                showToast(err.message || 'Error de conexión con el servidor.', 'error');
+            });
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('usuario_logeado');
+            applyLoggedOutUI();
+            showToast('Sesión cerrada correctamente.', 'success');
+        });
+    }
+
+    // Ejecutar verificación de autenticación inicial
+    checkAuth();
+
     // State
     let selectedFiles = [];
     let isUploading = false;

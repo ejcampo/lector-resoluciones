@@ -43,6 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 // Enrutador básico para APIs
+if ($requestUri === '/api/login') {
+    $controller = new \App\Controllers\AuthController();
+    $controller->handleLogin();
+    exit;
+}
+
 if ($requestUri === '/api/upload') {
     $controller = new \App\Controllers\UploadController();
     $controller->handleUpload();
