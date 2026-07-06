@@ -46,7 +46,12 @@
     <main class="app-container">
         
         <!-- Left Panel: File Selection -->
-        <section class="upload-panel">
+        <section class="upload-panel" id="upload-panel">
+            <button class="sidebar-toggle" id="btn-toggle-sidebar" type="button" aria-expanded="true" title="Ocultar panel de carga">
+                <span class="sidebar-toggle-icon">&lt;</span>
+            </button>
+
+            <div class="upload-panel-content">
             <div class="panel-card">
                 <h2 class="panel-title">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -101,6 +106,7 @@
                     </div>
                 </div>
             </div>
+            </div>
         </section>
 
         <!-- Right Panel: Results -->
@@ -126,12 +132,12 @@
                         <thead>
                             <tr>
                                 <th style="width: 5%;">#</th>
-                                <th style="width: 20%;">Archivo</th>
+                                <th style="width: 18%;">Archivo</th>
                                 <th style="width: 15%;">Número de resolución</th>
-                                <th style="width: 30%;">Primer párrafo</th>
-                                <th style="width: 12%;">Firmante</th>
-                                <th style="width: 8%;">Estado</th>
-                                <th style="width: 10%;">Acciones</th>
+                                <th style="width: 28%;">Primer párrafo</th>
+                                <th style="width: 11%;">Firmante</th>
+                                <th style="width: 7%;">Estado</th>
+                                <th style="width: 16%;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="results-table-body">

@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressBar = document.getElementById('progress-bar');
     const statsText = document.getElementById('stats-text');
     const selectedCount = document.getElementById('selected-count');
+    const appContainer = document.querySelector('.app-container');
+    const toggleSidebarBtn = document.getElementById('btn-toggle-sidebar');
     
     // Pagination Elements
     const paginationContainer = document.getElementById('pagination-container');
@@ -41,6 +43,15 @@ document.addEventListener('DOMContentLoaded', () => {
     toastContainer.className = 'toast-container';
     document.body.appendChild(toastContainer);
 
+    if (toggleSidebarBtn && appContainer) {
+        toggleSidebarBtn.addEventListener('click', () => {
+            const collapsed = appContainer.classList.toggle('sidebar-collapsed');
+            toggleSidebarBtn.setAttribute('aria-expanded', String(!collapsed));
+            toggleSidebarBtn.title = collapsed ? 'Mostrar panel de carga' : 'Ocultar panel de carga';
+            toggleSidebarBtn.querySelector('.sidebar-toggle-icon').textContent = collapsed ? '>' : '<';
+        });
+    }
+
     /**
      * Muestra una notificación temporal en pantalla.
      */
@@ -53,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>' 
                     : '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>'}
             </svg>
-            <div class="toast-message">${message}</div>
+            <div class="toast-message">${escapeHtml(message)}</div>
         `;
         toastContainer.appendChild(toast);
 
@@ -128,8 +139,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Evitar duplicados por nombre en la lista actual
-            if (selectedFiles.some(f => f.name === file.name)) {
+            if (selectedFiles.some(f => normalizeComparableFileName(f.name) === normalizeComparableFileName(file.name))) {
                 showToast(`El archivo "${file.name}" ya está en la lista.`, 'warning');
+                continue;
+            }
+
+            if (isFileAlreadyLoaded(file.name)) {
+                showToast(`El archivo "${file.name}" ya fue cargado.`, 'warning');
                 continue;
             }
 
@@ -171,6 +187,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isUploading) return;
         selectedFiles.splice(index, 1);
         updateUI();
+    };
+
+    /**
+     * Elimina un extracto ya cargado de la tabla de resultados.
+     */
+    window.removeExtractionResult = function(index) {
+        if (isUploading || index < 0 || index >= extractionResults.length) return;
+
+        const removed = extractionResults.splice(index, 1)[0];
+        const removedName = cleanFileName(removed?.archivo || 'Documento PDF');
+        showToast(`Se quitó "${removedName}" de la tabla.`, 'success');
+
+        updateResultsAfterRemoval();
     };
 
     /**
@@ -283,13 +312,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         // Mostrar archivos con estado "Procesando" mientras se ejecuta la extracción
                         emptyState.style.display = 'none';
-                        tableBody.innerHTML = '';
+                        if (extractionResults.length === 0) {
+                            tableBody.innerHTML = '';
+                        }
 
                         response.files.forEach((file, index) => {
                             const row = document.createElement('tr');
                             const fileName = file.name || file.archivo || 'Documento PDF';
+                            const rowNumber = extractionResults.length + index + 1;
                             row.innerHTML = `
-                                <td style="color: var(--text-secondary); font-weight: 500;">${index + 1}</td>
+                                <td style="color: var(--text-secondary); font-weight: 500;">${rowNumber}</td>
                                 <td style="font-weight: 500;">${fileName}</td>
                                 <td><div class="cell-loading"><div class="spinner-sm"></div> Procesando...</div></td>
                                 <td><div class="cell-loading"><div class="spinner-sm"></div> Procesando...</div></td>
@@ -367,27 +399,22 @@ document.addEventListener('DOMContentLoaded', () => {
             resetProcessButton();
 
             if (data.success && data.results) {
-                // Almacenar resultados para exportación
-                extractionResults = data.results;
+                const addedResults = appendNewExtractionResults(data.results);
+                const targetPage = Math.max(1, Math.ceil(extractionResults.length / itemsPerPage));
 
-                renderExtractionResults(data.results);
+                renderExtractionResults(extractionResults, targetPage);
+                updateStatsText(data.database);
                 
                 const okCount = data.results.filter(r => r.estado === 'OK').length;
-                const errCount = data.results.length - okCount;
-                
-                let statsMsg = `${data.results.length} documento(s) procesado(s)`;
-                if (okCount > 0) statsMsg += ` · ${okCount} exitoso(s)`;
-                if (errCount > 0) statsMsg += ` · ${errCount} con error`;
-                if (data.database) {
-                    statsMsg += data.database.enabled
-                        ? ` · BD guardada (${data.database.saved})`
-                        : ' · BD pendiente';
-                }
-                statsText.textContent = statsMsg;
 
-                if (okCount > 0) {
+                if (extractionResults.length > 0) {
                     exportBtn.disabled = false;
-                    showToast(`Extracción completada: ${okCount} documento(s) procesado(s) correctamente.`, 'success');
+                }
+
+                if (addedResults.length > 0 && okCount > 0) {
+                    showToast(`Extracción completada: ${addedResults.length} documento(s) agregado(s) a la tabla.`, 'success');
+                } else if (addedResults.length === 0) {
+                    showToast('Los documentos procesados ya estaban cargados en la tabla.', 'warning');
                 } else {
                     showToast('La extracción finalizó pero no se obtuvieron resultados exitosos.', 'error');
                 }
@@ -416,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Prepara la vista de resultados e inicializa la paginación.
      */
-    function renderExtractionResults(results) {
+    function renderExtractionResults(results, page = 1) {
         if (results.length === 0) {
             emptyState.style.display = 'flex';
             tableBody.innerHTML = '';
@@ -425,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         emptyState.style.display = 'none';
-        currentPage = 1;
+        currentPage = page;
         renderTablePage(currentPage);
     }
 
@@ -482,6 +509,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const actionBtn = result.archivo 
                 ? `<a href="${pdfUrl}" target="_blank" class="btn btn-secondary btn-sm" title="Ver PDF Original" style="text-decoration: none;">Ver PDF</a>`
                 : `<span style="color: var(--text-muted); font-size: 0.8rem;">No disp.</span>`;
+            const cancelBtn = `
+                <button class="btn btn-danger btn-sm" type="button" onclick="removeExtractionResult(${globalIndex - 1})" title="Quitar este extracto de la tabla">
+                    Cancelar
+                </button>
+            `;
 
             row.innerHTML = `
                 <td style="color: var(--text-secondary); font-weight: 500;">${globalIndex}</td>
@@ -490,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="paragraph-cell" ${parrafoAttr}>${escapeHtml(parrafoDisplay)}</td>
                 <td ${firmanteClass}>${escapeHtml(firmante)}</td>
                 <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-                <td>${actionBtn}</td>
+                <td><div class="action-buttons">${actionBtn}${cancelBtn}</div></td>
             `;
 
             // Si hay error, añadir tooltip con el mensaje
@@ -511,6 +543,80 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             paginationContainer.style.display = 'none';
         }
+    }
+
+    /**
+     * Sincroniza la tabla, la paginación y el botón de exportar después de quitar una fila.
+     */
+    function updateResultsAfterRemoval() {
+        if (extractionResults.length === 0) {
+            tableBody.innerHTML = '';
+            emptyState.style.display = 'flex';
+            paginationContainer.style.display = 'none';
+            exportBtn.disabled = true;
+            statsText.textContent = 'Sin documentos cargados';
+            currentPage = 1;
+            return;
+        }
+
+        const totalPages = Math.ceil(extractionResults.length / itemsPerPage);
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        renderTablePage(currentPage);
+        updateStatsText();
+        exportBtn.disabled = false;
+    }
+
+    /**
+     * Actualiza el resumen superior con los resultados que permanecen en la tabla.
+     */
+    function updateStatsText(database = null) {
+        const okCount = extractionResults.filter(r => r.estado === 'OK').length;
+        const errCount = extractionResults.length - okCount;
+
+        let statsMsg = `${extractionResults.length} documento(s) cargado(s)`;
+        if (okCount > 0) statsMsg += ` · ${okCount} exitoso(s)`;
+        if (errCount > 0) statsMsg += ` · ${errCount} con error`;
+        if (database) {
+            statsMsg += database.enabled
+                ? ` · BD guardada (${database.saved})`
+                : ' · BD pendiente';
+        }
+        statsText.textContent = statsMsg;
+    }
+
+    /**
+     * Comprueba duplicados usando el nombre original visible para el usuario.
+     */
+    function isFileAlreadyLoaded(fileName) {
+        const comparableName = normalizeComparableFileName(fileName);
+        return extractionResults.some(result => {
+            return normalizeComparableFileName(cleanFileName(result.archivo || '')) === comparableName;
+        });
+    }
+
+    /**
+     * Agrega resultados nuevos sin reemplazar los extractos que ya están en la tabla.
+     */
+    function appendNewExtractionResults(results) {
+        const added = [];
+
+        results.forEach(result => {
+            const resultName = cleanFileName(result.archivo || '');
+            if (!isFileAlreadyLoaded(resultName)) {
+                extractionResults.push(result);
+                added.push(result);
+            }
+        });
+
+        return added;
+    }
+
+    /**
+     * Replica la normalización de nombres del servidor para comparar duplicados.
+     */
+    function normalizeComparableFileName(fileName) {
+        return String(fileName).replace(/[^a-zA-Z0-9._-]/g, '_').toLowerCase();
     }
 
     // Eventos de Paginación
