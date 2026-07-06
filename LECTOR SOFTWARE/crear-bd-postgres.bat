@@ -1,6 +1,8 @@
 @echo off
 cd /d "%~dp0"
 
+set "PATH=C:\Program Files\PostgreSQL\17\bin;%PATH%"
+
 set "DB_HOST=%DB_HOST%"
 if "%DB_HOST%"=="" set "DB_HOST=127.0.0.1"
 
