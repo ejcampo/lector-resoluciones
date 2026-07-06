@@ -56,6 +56,7 @@ class BatchPdfToImageService {
                     'archivo' => $conversion['archivo'],
                     'cantidad_paginas' => $conversion['cantidad_paginas'],
                     'imagenes_generadas' => $conversion['imagenes_generadas'],
+                    'imagen_firma' => $conversion['imagen_firma'] ?? '',
                     'estado' => $conversion['estado']
                 ];
             } catch (Exception $e) {
@@ -87,6 +88,7 @@ class BatchPdfToImageService {
                     'archivo' => $conversion['archivo'],
                     'cantidad_paginas' => $conversion['cantidad_paginas'],
                     'imagenes_generadas' => $conversion['imagenes_generadas'],
+                    'imagen_firma' => $conversion['imagen_firma'] ?? '',
                     'estado' => $conversion['estado']
                 ];
             } catch (Exception $e) {

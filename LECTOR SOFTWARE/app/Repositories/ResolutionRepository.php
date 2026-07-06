@@ -6,7 +6,7 @@ use App\Database\DatabaseConnection;
 use Throwable;
 
 class ResolutionRepository {
-    public function saveMany(array $results): array {
+    public function saveMany(array $results, ?int $usuario_id = null): array {
         $saved = 0;
         $errors = [];
 
@@ -27,14 +27,18 @@ class ResolutionRepository {
                 primer_parrafo,
                 firmante,
                 estado,
-                mensaje
+                mensaje,
+                usuario_id,
+                imagen_firma
             ) VALUES (
                 :archivo,
                 :numero_resolucion,
                 :primer_parrafo,
                 :firmante,
                 :estado,
-                :mensaje
+                :mensaje,
+                :usuario_id,
+                :imagen_firma
             )
             ON CONFLICT (archivo) DO UPDATE SET
                 numero_resolucion = EXCLUDED.numero_resolucion,
@@ -42,6 +46,8 @@ class ResolutionRepository {
                 firmante = EXCLUDED.firmante,
                 estado = EXCLUDED.estado,
                 mensaje = EXCLUDED.mensaje,
+                usuario_id = EXCLUDED.usuario_id,
+                imagen_firma = EXCLUDED.imagen_firma,
                 actualizado_en = CURRENT_TIMESTAMP
         ';
 
@@ -56,6 +62,8 @@ class ResolutionRepository {
                     ':firmante' => $result['firmante'] ?? '',
                     ':estado' => $result['estado'] ?? '',
                     ':mensaje' => $result['mensaje'] ?? null,
+                    ':usuario_id' => $usuario_id,
+                    ':imagen_firma' => $result['imagen_firma'] ?? '',
                 ]);
                 $saved++;
             } catch (Throwable $e) {

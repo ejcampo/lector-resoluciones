@@ -32,12 +32,41 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userProfileHeader) userProfileHeader.style.display = 'flex';
         if (headerUserName) headerUserName.textContent = currentUser.nombre_completo || 'Usuario';
         if (headerUserRole) headerUserRole.textContent = currentUser.correo || 'admin';
+        
+        cargarResolucionesGuardadas();
     }
 
     function applyLoggedOutUI() {
         if (loginScreen) loginScreen.classList.remove('hidden');
         if (userProfileHeader) userProfileHeader.style.display = 'none';
         currentUser = null;
+        extractionResults = [];
+        if (typeof renderExtractionResults === 'function') {
+            renderExtractionResults([]);
+            updateStatsText();
+        }
+    }
+
+    function cargarResolucionesGuardadas() {
+        if (!currentUser || !currentUser.id) return;
+        
+        fetch(apiUrl(`/api/resoluciones?usuario_id=${currentUser.id}`))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.results) {
+                    extractionResults = data.results;
+                    renderExtractionResults(extractionResults);
+                    updateStatsText({enabled: true, saved: data.results.length});
+                    if (data.results.length > 0) {
+                        exportBtn.disabled = false;
+                    } else {
+                        exportBtn.disabled = true;
+                    }
+                }
+            })
+            .catch(err => {
+                console.error("Error al cargar resoluciones", err);
+            });
     }
 
     if (loginForm) {
@@ -99,21 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Ejecutar verificación de autenticación inicial
-    checkAuth();
-
-    // State
-    let selectedFiles = [];
-    let isUploading = false;
-    const API_BASE_URL = window.location.port === '5000'
-        ? 'http://127.0.0.1:5001'
-        : '';
-
-    function apiUrl(path) {
-        return `${API_BASE_URL}${path}`;
-    }
-    let extractionResults = []; // Almacena los resultados de la última extracción para exportar
-
     // DOM Elements
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('file-input');
@@ -136,6 +150,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnPrevPage = document.getElementById('btn-prev-page');
     const btnNextPage = document.getElementById('btn-next-page');
     const pageInfo = document.getElementById('page-info');
+
+    // State
+    let selectedFiles = [];
+    let isUploading = false;
+    const API_BASE_URL = window.location.port === '5000'
+        ? 'http://127.0.0.1:5001'
+        : '';
+
+    function apiUrl(path) {
+        return `${API_BASE_URL}${path}`;
+    }
+    let extractionResults = []; // Almacena los resultados de la última extracción para exportar
+
+    // Ejecutar verificación de autenticación inicial (ahora de forma segura tras declarar las variables)
+    checkAuth();
 
     // Pagination State
     let currentPage = 1;
@@ -429,6 +458,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td><div class="cell-loading"><div class="spinner-sm"></div> Procesando...</div></td>
                                 <td><div class="cell-loading"><div class="spinner-sm"></div> Procesando...</div></td>
                                 <td><div class="cell-loading"><div class="spinner-sm"></div> Procesando...</div></td>
+                                <td><div class="cell-loading"><div class="spinner-sm"></div> Procesando...</div></td>
+                                <td><div class="cell-loading"><div class="spinner-sm"></div> Procesando...</div></td>
                                 <td><span class="badge badge-processing">Procesando</span></td>
                                 <td><div class="cell-loading">...</div></td>
                             `;
@@ -487,13 +518,18 @@ document.addEventListener('DOMContentLoaded', () => {
         progressBar.style.width = '100%';
         progressBar.classList.add('progress-indeterminate');
 
+        const payload = { files: filesToExtract };
+        if (currentUser && currentUser.id) {
+            payload.usuario_id = currentUser.id;
+        }
+
         fetch(apiUrl('/api/extract'), {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ files: filesToExtract })
+            body: JSON.stringify(payload)
         })
         .then(response => response.json())
         .then(data => {
@@ -527,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Actualizar tabla con error general
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: var(--danger); padding: 2rem;">
+                        <td colspan="8" style="text-align: center; color: var(--danger); padding: 2rem;">
                             Error: ${data.error || 'No se pudieron procesar los documentos.'}
                         </td>
                     </tr>
@@ -594,14 +630,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const numRes = result.numero_resolucion || '—';
             const numResClass = result.numero_resolucion ? '' : 'style="color: var(--text-muted); font-style: italic;"';
 
-            // Primer párrafo (truncado para la tabla, completo en tooltip)
+            // Primer párrafo (completo en la tabla)
             const parrafo = result.primer_parrafo || '';
-            const parrafoDisplay = parrafo.length > 120 ? parrafo.substring(0, 120) + '…' : (parrafo || '—');
+            const parrafoDisplay = parrafo || '—';
             const parrafoAttr = parrafo ? `title="${escapeHtml(parrafo)}"` : 'style="color: var(--text-muted); font-style: italic;"';
 
             // Firmante
             const firmante = result.firmante || '—';
             const firmanteClass = result.firmante ? '' : 'style="color: var(--text-muted); font-style: italic;"';
+
+            // Firma Original
+            let firmaOriginalHtml = '<span style="color: var(--text-muted); font-style: italic;">No disp.</span>';
+            if (result.imagen_firma) {
+                const imgUrl = apiUrl(`/signatures/${result.imagen_firma}`);
+                firmaOriginalHtml = `
+                    <div class="firma-thumbnail-container" onclick="openFirmaLightbox('${imgUrl}')" title="Ver firma">
+                        <img src="${imgUrl}" alt="Firma" class="firma-thumbnail-img" onerror="this.parentElement.innerHTML='<span style=\\'color:var(--text-muted)\\'>No disp.</span>'">
+                        <div class="firma-thumbnail-overlay">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                <line x1="11" y1="8" x2="11" y2="14"></line>
+                                <line x1="8" y1="11" x2="14" y2="11"></line>
+                            </svg>
+                        </div>
+                    </div>
+                `;
+            }
 
             // Badge de estado
             const badgeClass = isOk ? 'badge-success' : 'badge-error';
@@ -624,6 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td ${numResClass}><span class="resolution-number">${escapeHtml(numRes)}</span></td>
                 <td class="paragraph-cell" ${parrafoAttr}>${escapeHtml(parrafoDisplay)}</td>
                 <td ${firmanteClass}>${escapeHtml(firmante)}</td>
+                <td>${firmaOriginalHtml}</td>
                 <td><span class="badge ${badgeClass}">${badgeText}</span></td>
                 <td><div class="action-buttons">${actionBtn}${cancelBtn}</div></td>
             `;
@@ -737,20 +793,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /**
-     * Limpia el nombre del archivo eliminando el prefijo timestamp_uniqid_ del servidor.
+     * Devuelve el nombre del archivo (ya no tiene prefijos especiales)
      */
     function cleanFileName(filename) {
-        // El servidor añade: time() + '_' + uniqid() + '_' + nombre_original
-        // Ejemplo: 1751401234_668dc1a2e4b21_documento.pdf → documento.pdf
-        const parts = filename.split('_');
-        if (parts.length >= 3) {
-            // Verificar si los primeros dos segmentos parecen timestamp y uniqid
-            const firstIsNum = /^\d{10,}$/.test(parts[0]);
-            const secondIsHex = /^[a-f0-9]{13,}$/.test(parts[1]);
-            if (firstIsNum && secondIsHex) {
-                return parts.slice(2).join('_');
-            }
-        }
         return filename;
     }
 
@@ -840,4 +885,31 @@ document.addEventListener('DOMContentLoaded', () => {
             exportBtn.disabled = false;
         });
     }
+
+    // Modal Lightbox logic
+    window.openFirmaLightbox = function(imgSrc) {
+        const lightbox = document.getElementById('firma-lightbox');
+        const img = document.getElementById('firma-lightbox-img');
+        if (lightbox && img) {
+            img.src = imgSrc;
+            lightbox.style.display = 'flex';
+        }
+    };
+
+    // Cerrar lightbox
+    const lightboxCloseBtn = document.getElementById('firma-lightbox-close');
+    const lightboxOverlay = document.getElementById('firma-lightbox-overlay');
+    const lightbox = document.getElementById('firma-lightbox');
+
+    if (lightboxCloseBtn) {
+        lightboxCloseBtn.addEventListener('click', () => {
+            if (lightbox) lightbox.style.display = 'none';
+        });
+    }
+    if (lightboxOverlay) {
+        lightboxOverlay.addEventListener('click', () => {
+            if (lightbox) lightbox.style.display = 'none';
+        });
+    }
+
 });

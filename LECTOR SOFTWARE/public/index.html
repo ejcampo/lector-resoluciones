@@ -183,10 +183,11 @@
                                 <th style="width: 5%;">#</th>
                                 <th style="width: 18%;">Archivo</th>
                                 <th style="width: 15%;">Número de resolución</th>
-                                <th style="width: 28%;">Primer párrafo</th>
-                                <th style="width: 11%;">Firmante</th>
-                                <th style="width: 7%;">Estado</th>
-                                <th style="width: 16%;">Acciones</th>
+                                <th style="width: 25%;">Primer párrafo</th>
+                                <th style="width: 10%;">Firmante</th>
+                                <th style="width: 10%;">Firma Original</th>
+                                <th style="width: 5%;">Estado</th>
+                                <th style="width: 12%;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="results-table-body">
@@ -226,6 +227,15 @@
     <footer class="app-footer">
         <p>&copy; 2026 Lector de Resoluciones. Desarrollado con una arquitectura moderna de procesamiento local.</p>
     </footer>
+
+    <!-- Modal Lightbox para ver firma ampliada -->
+    <div class="firma-lightbox" id="firma-lightbox" style="display:none;">
+        <div class="firma-lightbox-overlay" id="firma-lightbox-overlay"></div>
+        <div class="firma-lightbox-content">
+            <button class="firma-lightbox-close" id="firma-lightbox-close" title="Cerrar">&times;</button>
+            <img id="firma-lightbox-img" src="" alt="Firma ampliada">
+        </div>
+    </div>
 
 </body>
 </html>

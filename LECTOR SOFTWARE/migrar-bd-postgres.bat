@@ -19,6 +19,7 @@ echo Creando tablas en PostgreSQL...
 echo Base: %DB_DATABASE%  Host: %DB_HOST%:%DB_PORT%  Usuario: %DB_USERNAME%
 psql -h "%DB_HOST%" -p "%DB_PORT%" -U "%DB_USERNAME%" -d "%DB_DATABASE%" -f "database\migrations\001_create_resoluciones_extraidas.sql"
 psql -h "%DB_HOST%" -p "%DB_PORT%" -U "%DB_USERNAME%" -d "%DB_DATABASE%" -f "database\migrations\002_create_usuarios.sql"
+psql -h "%DB_HOST%" -p "%DB_PORT%" -U "%DB_USERNAME%" -d "%DB_DATABASE%" -f "database\migrations\003_add_usuario_id_to_resoluciones.sql"
 
 echo.
 echo Migraciones finalizadas.

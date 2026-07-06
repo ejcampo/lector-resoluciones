@@ -120,12 +120,27 @@ class ExtractionController {
                 }
             }
 
+            // Inyectar imagen_firma desde los resultados de conversión en los resultados de extracción
+            $firmaMap = [];
+            foreach ($conversionResults as $convResult) {
+                $archivo = $convResult['archivo'] ?? '';
+                $firma = $convResult['imagen_firma'] ?? '';
+                if ($archivo && $firma) {
+                    $firmaMap[$archivo] = $firma;
+                }
+            }
+            foreach ($extractionResults as &$er) {
+                $er['imagen_firma'] = $firmaMap[$er['archivo'] ?? ''] ?? '';
+            }
+            unset($er);
+
             // DEBUG: Generar reporte debug.json
             if ($this->debugService->isEnabled()) {
                 $this->debugService->generarReporte();
             }
 
-            $databaseResult = $this->resolutionRepository->saveMany($extractionResults);
+            $usuario_id = isset($payload['usuario_id']) ? (int)$payload['usuario_id'] : null;
+            $databaseResult = $this->resolutionRepository->saveMany($extractionResults, $usuario_id);
 
             // Paso 4: Limpiar archivos temporales (SOLO si DEBUG está desactivado)
             $cleanupResult = ['eliminados' => 0, 'errores' => 0];

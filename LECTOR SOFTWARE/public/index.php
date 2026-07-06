@@ -49,6 +49,12 @@ if ($requestUri === '/api/login') {
     exit;
 }
 
+if ($requestUri === '/api/resoluciones') {
+    $controller = new \App\Controllers\ResolucionesController();
+    $controller->getUserResolutions();
+    exit;
+}
+
 if ($requestUri === '/api/upload') {
     $controller = new \App\Controllers\UploadController();
     $controller->handleUpload();

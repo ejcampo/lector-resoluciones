@@ -72,6 +72,7 @@ class PdfToImageService {
             'original_name' => $result['original_name'],
             'cantidad_paginas' => $result['paginas'],
             'imagenes_generadas' => $result['imagenes'],
+            'imagen_firma' => $result['imagen_firma'] ?? '',
             'estado' => $result['estado']
         ];
     }

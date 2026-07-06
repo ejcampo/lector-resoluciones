@@ -3,6 +3,11 @@ import os
 import json
 
 try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
+try:
     import fitz  # PyMuPDF
 except ImportError:
     fitz = None
@@ -26,17 +31,7 @@ JPEG_QUALITY = 85
 
 def clean_original_name(pdf_path):
     base_name = os.path.splitext(os.path.basename(pdf_path))[0]
-    parts = base_name.split("_")
-
-    if len(parts) >= 3:
-        original_base_name = "_".join(parts[2:])
-    else:
-        original_base_name = base_name
-
-    if original_base_name.lower().endswith(".pdf"):
-        original_base_name = original_base_name[:-4]
-
-    return original_base_name
+    return base_name
 
 
 def image_output_path(output_dir, original_base_name, page_num):
@@ -120,6 +115,37 @@ def get_total_pages(pdf_path):
     return 0
 
 
+def crop_signature(image_path, signatures_dir, original_base_name):
+    """Recorta el tercio inferior (30%) de la última página del PDF.
+
+    Este fragmento generalmente contiene la firma del funcionario.
+    La imagen recortada se guarda en public/signatures/ con un nombre
+    derivado del documento original.
+
+    Returns:
+        str: Nombre del archivo de firma generado (solo el nombre, no la ruta completa).
+    """
+    if Image is None:
+        return ""
+
+    try:
+        img = Image.open(image_path)
+        width, height = img.size
+        # Recortar el 30% inferior
+        crop_top = int(height * 0.70)
+        cropped = img.crop((0, crop_top, width, height))
+
+        sig_filename = f"firma_{original_base_name}.jpg"
+        sig_path = os.path.join(signatures_dir, sig_filename)
+        cropped.save(sig_path, "JPEG", quality=90)
+        cropped.close()
+        img.close()
+
+        return sig_filename
+    except Exception:
+        return ""
+
+
 def convert_pdf_to_images(pdf_path, output_dir, mode="first_last"):
     try:
         if not os.path.exists(pdf_path):
@@ -142,6 +168,16 @@ def convert_pdf_to_images(pdf_path, output_dir, mode="first_last"):
         else:
             generated_images = convert_with_pdfium(pdf_path, output_dir, original_base_name, page_indices)
 
+        # --- Recortar firma de la última página ---
+        signature_path = ""
+        if generated_images:
+            last_image_path = generated_images[-1]
+            # Carpeta de firmas: public/signatures/ relativa al proyecto
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+            signatures_dir = os.path.join(project_root, "public", "signatures")
+            os.makedirs(signatures_dir, exist_ok=True)
+            signature_path = crop_signature(last_image_path, signatures_dir, original_base_name)
+
         return {
             "success": True,
             "archivo": os.path.basename(pdf_path),
@@ -149,6 +185,7 @@ def convert_pdf_to_images(pdf_path, output_dir, mode="first_last"):
             "paginas": total_pages,
             "paginas_renderizadas": len(generated_images),
             "imagenes": generated_images,
+            "imagen_firma": signature_path,
             "estado": "Completado"
         }
     except Exception as e:

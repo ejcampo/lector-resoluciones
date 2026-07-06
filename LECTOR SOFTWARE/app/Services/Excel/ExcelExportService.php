@@ -102,23 +102,6 @@ class ExcelExportService {
      * @return string Nombre limpio (ej: documento.pdf)
      */
     private function limpiarNombreArchivo(string $filename): string {
-        $parts = explode('_', $filename);
-
-        if (count($parts) >= 3) {
-            $primerSegmento = $parts[0];
-            $segundoSegmento = $parts[1];
-
-            // Verificar si el primer segmento es un timestamp (10+ dígitos)
-            $esTimestamp = (strlen($primerSegmento) >= 10) && ctype_digit($primerSegmento);
-
-            // Verificar si el segundo segmento es un uniqid (13+ caracteres hexadecimales)
-            $esUniqid = (strlen($segundoSegmento) >= 13) && ctype_xdigit($segundoSegmento);
-
-            if ($esTimestamp && $esUniqid) {
-                return implode('_', array_slice($parts, 2));
-            }
-        }
-
         return $filename;
     }
 

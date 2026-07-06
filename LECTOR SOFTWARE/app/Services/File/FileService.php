@@ -49,9 +49,9 @@ class FileService {
             throw new Exception("El archivo '" . $file['name'] . "' no es un archivo PDF real (encabezado no coincide).");
         }
 
-        // 5. Generar un nombre único para evitar colisiones en almacenamiento temporal
+        // 5. Utilizar nombre seguro (sin prefijo de tiempo) para permitir sobreescritura y evitar duplicados
         $safeName = $this->sanitizeFileName($file['name']);
-        $uniqueName = time() . '_' . uniqid() . '_' . $safeName;
+        $uniqueName = $safeName;
         $targetPath = $this->uploadDir . $uniqueName;
 
         // 6. Mover archivo al directorio temporal de destino
