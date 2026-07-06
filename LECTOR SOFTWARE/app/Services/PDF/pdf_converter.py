@@ -115,29 +115,101 @@ def get_total_pages(pdf_path):
     return 0
 
 
-def crop_signature(image_path, signatures_dir, original_base_name):
-    """Recorta el tercio inferior (30%) de la última página del PDF.
-
-    Este fragmento generalmente contiene la firma del funcionario.
-    La imagen recortada se guarda en public/signatures/ con un nombre
-    derivado del documento original.
-
-    Returns:
-        str: Nombre del archivo de firma generado (solo el nombre, no la ruta completa).
+def find_smart_crop_fraction(img_path):
     """
+    Analiza la densidad de pixeles verticales de una imagen escaneada 
+    para detectar dónde termina realmente el contenido del documento, 
+    ignorando bordes negros o ruido de escáner en la parte inferior.
+    """
+    try:
+        img = Image.open(img_path).convert('L')
+        orig_width, orig_height = img.size
+        
+        # Reducir imagen para procesamiento ultra rápido
+        scale = 400 / orig_width
+        height = int(orig_height * scale)
+        img = img.resize((400, height))
+        
+        threshold = 200
+        row_density = []
+        for y in range(height):
+            # Muestrear pixeles intercalados
+            dark_pixels = sum(1 for x in range(0, 400, 2) if img.getpixel((x, y)) < threshold)
+            row_density.append(dark_pixels)
+
+        # Suavizar el perfil
+        smoothed = []
+        window = 3
+        for i in range(height):
+            start = max(0, i - window)
+            end = min(height, i + window + 1)
+            smoothed.append(sum(row_density[start:end]) / (end - start))
+
+        img.close()
+
+        in_content = False
+        content_spans = []
+        start_y = 0
+        for y in range(height):
+            if smoothed[y] > 3:
+                if not in_content:
+                    in_content = True
+                    start_y = y
+            else:
+                if in_content:
+                    in_content = False
+                    content_spans.append((start_y, y - 1))
+        if in_content:
+            content_spans.append((start_y, height - 1))
+            
+        if not content_spans:
+            return 0.35
+
+        min_span = int(height * 0.02)
+        valid_spans = [s for s in content_spans if (s[1] - s[0]) > min_span]
+        
+        if not valid_spans:
+            return 0.35
+            
+        # Descartar ruido aislado en el fondo (ej. linea negra del escáner)
+        while len(valid_spans) > 1:
+            last_span = valid_spans[-1]
+            prev_span = valid_spans[-2]
+            gap = last_span[0] - prev_span[1]
+            
+            if gap > int(height * 0.15) and last_span[0] > int(height * 0.80):
+                valid_spans.pop()
+            else:
+                break
+                
+        real_content_bottom = valid_spans[-1][1]
+        
+        # El bloque de firma suele ser el ultimo 35% del contenido real
+        signature_height = int(height * 0.35)
+        crop_start_y = max(0, real_content_bottom - signature_height)
+        
+        return crop_start_y / height
+    except Exception:
+        return 0.35
+
+def crop_signature(image_path, signatures_dir, original_base_name, pdf_path=None, last_page_index=None):
+    """Recorta el area de firma inteligentemente basandose en densidad visual."""
     if Image is None:
         return ""
 
     try:
         img = Image.open(image_path)
         width, height = img.size
-        # Recortar el 30% inferior
-        crop_top = int(height * 0.70)
+
+        # Usar algoritmo de densidad visual
+        crop_fraction = find_smart_crop_fraction(image_path)
+
+        crop_top = int(height * crop_fraction)
         cropped = img.crop((0, crop_top, width, height))
 
         sig_filename = f"firma_{original_base_name}.jpg"
         sig_path = os.path.join(signatures_dir, sig_filename)
-        cropped.save(sig_path, "JPEG", quality=90)
+        cropped.save(sig_path, "JPEG", quality=92)
         cropped.close()
         img.close()
 
@@ -168,15 +240,22 @@ def convert_pdf_to_images(pdf_path, output_dir, mode="first_last"):
         else:
             generated_images = convert_with_pdfium(pdf_path, output_dir, original_base_name, page_indices)
 
-        # --- Recortar firma de la última página ---
+        # --- Recortar firma de la última página con deteccion inteligente ---
         signature_path = ""
         if generated_images:
             last_image_path = generated_images[-1]
+            last_page_index = page_indices[-1]
             # Carpeta de firmas: public/signatures/ relativa al proyecto
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
             signatures_dir = os.path.join(project_root, "public", "signatures")
             os.makedirs(signatures_dir, exist_ok=True)
-            signature_path = crop_signature(last_image_path, signatures_dir, original_base_name)
+            signature_path = crop_signature(
+                last_image_path,
+                signatures_dir,
+                original_base_name,
+                pdf_path=pdf_path,
+                last_page_index=last_page_index
+            )
 
         return {
             "success": True,

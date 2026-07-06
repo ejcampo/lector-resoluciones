@@ -1021,9 +1021,9 @@ tr:hover td {
     border-radius: var(--border-radius-sm);
     overflow: hidden;
     border: 1px solid var(--border-color);
-    width: 120px;
-    height: 40px;
-    background-color: var(--bg-tertiary);
+    width: 150px;
+    height: 90px;
+    background-color: white;
     transition: all var(--transition-speed) ease;
 }
 
