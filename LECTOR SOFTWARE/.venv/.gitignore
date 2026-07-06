@@ -1,0 +1,13 @@
+.codex-temp/
+.venv/
+
+# Carpetas de entorno de desarrollo y configuraciones locales
+.vscode/
+.agents/
+
+# Archivos de caché de Python
+**/__pycache__/
+*.pyc
+
+# Almacenamiento temporal del sistema (Imágenes, PDFs generados y logs de debug)
+LECTOR SOFTWARE/storage/temp/

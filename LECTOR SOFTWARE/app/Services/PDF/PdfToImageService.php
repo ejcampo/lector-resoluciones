@@ -28,13 +28,15 @@ class PdfToImageService {
     }
 
     /**
-     * Convierte un archivo PDF cargado a imágenes PNG.
+     * Convierte un archivo PDF cargado a imágenes.
      *
      * @param string $pdfFileName Nombre del archivo PDF (ubicado en storage/temp/uploads/)
+     * @param string $mode Modo de renderizado: 'first_last' (solo primera y última página,
+     *                     optimizado para OCR) o 'all' (todas las páginas)
      * @return array Resumen de la conversión
      * @throws Exception
      */
-    public function convert(string $pdfFileName): array {
+    public function convert(string $pdfFileName, string $mode = 'first_last'): array {
         $pdfPath = $this->uploadsDir . $pdfFileName;
 
         if (!file_exists($pdfPath)) {
@@ -43,10 +45,11 @@ class PdfToImageService {
 
         // Construir comando de ejecución seguro para llamar al script de Python
         $cmd = sprintf(
-            'python %s %s %s',
+            'python %s %s %s %s',
             escapeshellarg($this->pythonScriptPath),
             escapeshellarg($pdfPath),
-            escapeshellarg($this->imagesDir)
+            escapeshellarg($this->imagesDir),
+            escapeshellarg($mode)
         );
 
         $output = [];
