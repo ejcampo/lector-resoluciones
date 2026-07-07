@@ -30,7 +30,7 @@ $allowedOrigins = [
 if (in_array($origin, $allowedOrigins, true)) {
     header('Access-Control-Allow-Origin: ' . $origin);
     header('Vary: Origin');
-    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Accept');
 }
 
@@ -51,7 +51,11 @@ if ($requestUri === '/api/login') {
 
 if ($requestUri === '/api/resoluciones') {
     $controller = new \App\Controllers\ResolucionesController();
-    $controller->getUserResolutions();
+    if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+        $controller->deleteResolution();
+    } else {
+        $controller->getUserResolutions();
+    }
     exit;
 }
 

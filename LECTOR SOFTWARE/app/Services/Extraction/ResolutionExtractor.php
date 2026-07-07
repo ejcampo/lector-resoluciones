@@ -104,9 +104,11 @@ class ResolutionExtractor {
             'RESOLUCIÓN Nro', 'RESOLUCION Nro',
             'RESOLUCIÓN Num', 'RESOLUCION Num',
             'RESOLUCIÓN No', 'RESOLUCION No',
+            'DECRETO NÚMERO', 'DECRETO NUMERO',
+            'DECRETO N°', 'DECRETO No', 'DECRETO Nro', 'DECRETO Num',
             'NÚMERO', 'NUMERO',
             'N.°', 'N°', 'Nro.', 'Nro', 'Num.', 'Num', 'N °', 'No.', 'No ',
-            'RESOLUCIÓN', 'RESOLUCION'
+            'RESOLUCIÓN', 'RESOLUCION', 'DECRETO'
         ];
 
         $posIndicador = false;
@@ -182,6 +184,10 @@ class ResolutionExtractor {
             'EL SECRET ARIO',
             'LA DIRECTORA',
             'EL DIRECTOR',
+            'POR EL CUAL',
+            'POR MEDIO DEL CUAL',
+            'EL GOBERNADOR',
+            'LA GOBERNADORA',
         ];
 
         $posInicio = false;
@@ -276,6 +282,12 @@ class ResolutionExtractor {
             'Director General',
             'DIRECTORA GENERAL',
             'DIRECTOR GENERAL',
+            'Gobernador del Departamento',
+            'GOBERNADOR DEL DEPARTAMENTO',
+            'Gobernador',
+            'Gobernadora',
+            'GOBERNADOR',
+            'GOBERNADORA',
         ];
 
         $indiceCargo = -1;

@@ -349,21 +349,62 @@ document.addEventListener('DOMContentLoaded', () => {
     window.removeExtractionResult = function(index) {
         if (isUploading || index < 0 || index >= extractionResults.length) return;
 
-        const removed = extractionResults.splice(index, 1)[0];
+        const removed = extractionResults[index];
         const removedName = cleanFileName(removed?.archivo || 'Documento PDF');
-        showToast(`Se quitó "${removedName}" de la tabla.`, 'success');
 
-        updateResultsAfterRemoval();
+        if (!confirm(`¿Estás seguro de que deseas eliminar "${removedName}"? Se borrará de la tabla y de la base de datos.`)) {
+            return;
+        }
+
+        if (currentUser && currentUser.id && removed.archivo) {
+            // Eliminar de la base de datos
+            fetch(apiUrl('/api/resoluciones'), {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    archivo: removed.archivo,
+                    usuario_id: currentUser.id
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    extractionResults.splice(index, 1);
+                    showToast(`Se eliminó "${removedName}" correctamente.`, 'success');
+                    updateResultsAfterRemoval();
+                } else {
+                    showToast(data.error || `Error al eliminar "${removedName}".`, 'error');
+                }
+            })
+            .catch(err => {
+                showToast(`Error de conexión al eliminar "${removedName}".`, 'error');
+            });
+        } else {
+            // Solo quitar de la UI si no hay usuario logeado (caso fallback)
+            extractionResults.splice(index, 1);
+            showToast(`Se quitó "${removedName}" de la tabla.`, 'success');
+            updateResultsAfterRemoval();
+        }
     };
 
     /**
      * Actualiza la interfaz gráfica con los archivos seleccionados.
      */
     function updateUI() {
+        const view1 = document.getElementById('upload-view-1');
+        const view2 = document.getElementById('upload-view-2');
+
         if (selectedFiles.length === 0) {
+            if (view1) view1.style.display = 'flex';
+            if (view2) view2.style.display = 'none';
             fileList.innerHTML = '<p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 1.5rem 0;">Ningún archivo seleccionado</p>';
             selectedCount.textContent = '';
         } else {
+            if (view1) view1.style.display = 'none';
+            if (view2) view2.style.display = 'flex';
             selectedCount.textContent = `(${selectedFiles.length})`;
             fileList.innerHTML = selectedFiles.map((file, index) => `
                 <div class="file-item">

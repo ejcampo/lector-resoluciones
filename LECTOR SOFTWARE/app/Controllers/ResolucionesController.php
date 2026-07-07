@@ -7,7 +7,7 @@ use Throwable;
 
 class ResolucionesController {
     /**
-     * Obtiene la lista de resoluciones de un usuario específico.
+     * Obtiene la lista de resoluciones de un usuario específico (no confirmadas).
      */
     public function getUserResolutions(): void {
         header('Content-Type: application/json; charset=utf-8');
@@ -138,7 +138,6 @@ class ResolucionesController {
 
         try {
             $pdo = DatabaseConnection::get();
-
             $confirmados = 0;
 
             foreach ($archivos as $archivo) {
@@ -168,6 +167,60 @@ class ResolucionesController {
             echo json_encode([
                 'success' => false,
                 'error' => 'Error interno: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Elimina una resolución específica para un usuario.
+     */
+    public function deleteResolution(): void {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {
+            http_response_code(405);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Método no permitido.'
+            ]);
+            return;
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        $archivo = $input['archivo'] ?? '';
+        $usuario_id = isset($input['usuario_id']) ? (int)$input['usuario_id'] : 0;
+
+        if (empty($archivo) || $usuario_id <= 0) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Faltan parámetros requeridos: archivo o usuario_id.'
+            ]);
+            return;
+        }
+
+        try {
+            $repo = new \App\Repositories\ResolutionRepository();
+            $deleted = $repo->deleteByArchivoAndUsuario($archivo, $usuario_id);
+
+            if ($deleted) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Resolución eliminada correctamente de la base de datos.'
+                ]);
+            } else {
+                http_response_code(404);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'No se encontró la resolución o no tienes permisos para eliminarla.'
+                ]);
+            }
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Error interno al intentar eliminar: ' . $e->getMessage()
             ]);
         }
     }

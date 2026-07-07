@@ -77,4 +77,18 @@ class ResolutionRepository {
             'errors' => $errors,
         ];
     }
+
+    public function deleteByArchivoAndUsuario(string $archivo, int $usuario_id): bool {
+        try {
+            $pdo = DatabaseConnection::get();
+            $stmt = $pdo->prepare('DELETE FROM resoluciones_extraidas WHERE archivo = :archivo AND usuario_id = :usuario_id');
+            $stmt->execute([
+                ':archivo' => $archivo,
+                ':usuario_id' => $usuario_id
+            ]);
+            return $stmt->rowCount() > 0;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
 }

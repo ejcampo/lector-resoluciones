@@ -1,10 +1,11 @@
 @echo off
 cd /d "%~dp0"
+set PHP_BIN=%~dp0.codex-temp\php-8.5.8-run\php.exe
 
 netstat -ano | findstr ":5001 " | findstr "LISTENING" >nul
 if errorlevel 1 (
     echo Iniciando API PHP en http://127.0.0.1:5001
-    start "API PHP 5001" cmd /k "cd /d ""%~dp0"" && php -S 127.0.0.1:5001 -t public public/index.php"
+    start "API PHP 5001" cmd /k "cd /d ""%~dp0"" && ""%~dp0.codex-temp\php-8.5.8-run\php.exe"" -d upload_max_filesize=50M -d post_max_size=50M -S 127.0.0.1:5001 -t public public/index.php"
     timeout /t 2 /nobreak >nul
 ) else (
     echo La API PHP ya esta iniciada en el puerto 5001.
