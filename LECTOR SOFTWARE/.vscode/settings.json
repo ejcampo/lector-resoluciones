@@ -7,5 +7,9 @@
         "enable": true,
         "baseUri": "/api",
         "proxyUri": "http://127.0.0.1:5001/api"
-    }
+    },
+    "liveServer.settings.ignoreFiles": [
+        "public/signatures/**",
+        ".vscode/**"
+    ]
 }         

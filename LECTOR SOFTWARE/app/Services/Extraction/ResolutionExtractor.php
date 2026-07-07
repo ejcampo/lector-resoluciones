@@ -253,7 +253,10 @@ class ResolutionExtractor {
             }
         }
 
-        // Buscar la línea que contiene el cargo del firmante
+        // Buscar la línea que contiene el cargo del firmante.
+        // Hacemos la búsqueda de ABAJO hacia ARRIBA (reverse) para encontrar 
+        // la firma real al final del documento y evitar coincidencias falsas
+        // dentro del texto de los artículos (ej. "Secretaria de Educación" en un párrafo).
         $cargoMarcadores = [
             'Secretaria de Educacion',
             'Secretario de Educacion',
@@ -265,6 +268,10 @@ class ResolutionExtractor {
             'SECRETARIO DE EDUCACIÓN',
             'Secret aria de Educacion',
             'Secre taria de Educacion',
+            'Secretaria de Ed',
+            'Secretario de Ed',
+            'SECRETARIA DE ED',
+            'SECRETARIO DE ED',
             'Directora General',
             'Director General',
             'DIRECTORA GENERAL',
@@ -272,8 +279,15 @@ class ResolutionExtractor {
         ];
 
         $indiceCargo = -1;
+        $totalLineas = count($lineasLimpias);
 
-        for ($i = 0; $i < count($lineasLimpias); $i++) {
+        // Buscar desde el final de la página hacia arriba
+        for ($i = $totalLineas - 1; $i >= 0; $i--) {
+            // No buscar más arriba del 60% inferior de la página para evitar falsos positivos
+            if ($i < $totalLineas - 30) {
+                break;
+            }
+
             foreach ($cargoMarcadores as $marcador) {
                 if (stripos($lineasLimpias[$i], $marcador) !== false) {
                     $indiceCargo = $i;
@@ -534,8 +548,28 @@ class ResolutionExtractor {
         $palabras = array_filter(explode(' ', $texto), function ($p) {
             return strlen(trim($p)) > 0;
         });
-        if (count($palabras) < 2) {
+        $numPalabras = count($palabras);
+        if ($numPalabras < 2) {
             return false;
+        }
+
+        // Un nombre normal no tiene más de 6-7 palabras
+        if ($numPalabras > 7) {
+            return false;
+        }
+
+        // Si contiene palabras típicas del cuerpo de la resolución, rechazar
+        $palabrasProhibidas = [
+            'ARTICULO', 'ARTÍCULO', 'RESOLUCION', 'RESOLUCIÓN', 
+            'CONSIDERANDO', 'PARAGRAFO', 'PUBLIQUESE', 'PUBLÍQUESE',
+            'COMUNIQUESE', 'COMUNÍQUESE', 'CUMPLASE', 'CÚMPLASE',
+            'DADA', 'POPAYAN', 'POPAYÁN', 'ESTABLECIMIENTO', 'EDUCATIVO'
+        ];
+        $textoMayusculas = mb_strtoupper($texto, 'UTF-8');
+        foreach ($palabrasProhibidas as $prohibida) {
+            if (mb_strpos($textoMayusculas, $prohibida, 0, 'UTF-8') !== false) {
+                return false;
+            }
         }
 
         return true;

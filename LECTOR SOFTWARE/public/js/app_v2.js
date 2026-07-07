@@ -442,14 +442,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (response.success) {
                         showToast('Archivos cargados exitosamente. Iniciando procesamiento...', 'success');
 
-                        // Mostrar archivos con estado "Procesando" mientras se ejecuta la extracción
-                        emptyState.style.display = 'none';
+                        // Vaciar la lista de selección local
+                        selectedFiles = [];
+                        updateUI();
+
+                        // Ocultar estado vacío si estaba visible
+                        const emptyStateEl = document.getElementById('empty-state');
+                        if (emptyStateEl) emptyStateEl.style.display = 'none';
+
+                        // Si la tabla estaba vacía (sin resultados previos), la limpiamos para quitar basura
                         if (extractionResults.length === 0) {
                             tableBody.innerHTML = '';
                         }
 
+                        // Agregar filas de "Procesando..." directamente a la tabla
                         response.files.forEach((file, index) => {
                             const row = document.createElement('tr');
+                            row.className = 'processing-temp-row'; // Identificador temporal
                             const fileName = file.name || file.archivo || 'Documento PDF';
                             const rowNumber = extractionResults.length + index + 1;
                             row.innerHTML = `
@@ -467,10 +476,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
 
                         statsText.textContent = 'Ejecutando conversión, OCR y extracción...';
-
-                        // Vaciar la lista de selección local
-                        selectedFiles = [];
-                        updateUI();
 
                         // ──────────────────────────────────────────────────────
                         // PASO 2: Ejecutar el pipeline de extracción inteligente
@@ -507,6 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         xhr.send(formData);
     }
+
+
 
     /**
      * Ejecuta el pipeline completo de extracción: Conversión → OCR → Extracción.
