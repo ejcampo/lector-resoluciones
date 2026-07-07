@@ -1,0 +1,394 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║            LECTOR DE RESOLUCIONES - FLUJO DE USUARIO MEJORADO               ║
+║                    Sistema de Navegación y Confirmación                      ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          PANTALLA INICIAL (Login)                           │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                   Lector de Resoluciones                           │   │
+│  │                   [Logo] Iniciar Sesión                            │   │
+│  │                                                                    │   │
+│  │   Email:        [________________]                                │   │
+│  │   Contraseña:   [________________]                                │   │
+│  │                 [  Iniciar Sesión  ]                              │   │
+│  │                                                                    │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│                              ↓ (autenticación exitosa)                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              APLICACIÓN PRINCIPAL - VISTA "PROCESAR DOCUMENTOS"             │
+│                          (Pestaña #1 - Activa)                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────┐   │
+│  │  🏠 Lector v1.0  [Excel↓]  [Juan Pérez  ⬅️ Salir]               │   │
+│  └────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────┬─────────────────────────────────────────────────┐   │
+│  │  📤 PROCESAR   │  ✓ CONFIRMADOS  (Nueva pestaña)               │   │
+│  │  (activo)       │                                               │   │
+│  └─────────────────┴─────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ╔════════════════════╗    ╔═══════════════════════════════════════════╗ │
+│  ║  CARGA DE ARCHIVOS ║    ║   EXTRACTOS DE RESOLUCIONES (3 docs)    ║ │
+│  ║                    ║    ║                                          ║ │
+│  ║ 📄 Arrastra PDFs   ║    ║  #  Archivo    Número   Párrafo Firma  ║ │
+│  ║    aquí o haz      ║    ║ ─────────────────────────────────────────║ │
+│  ║    clic            ║    ║  1  Res_001.pdf 05285-06-2026  ✓      ║ │
+│  ║                    ║    ║  2  Res_002.pdf 05286-06-2026  ✓      ║ │
+│  ║ [Seleccionar]      ║    ║  3  Res_003.pdf 05287-06-2026  ✓      ║ │
+│  ║                    ║    ║                                          ║ │
+│  ║ Archivos: 0        ║    ║ [✓ CONFIRMAR DOCUMENTOS] ← NUEVO BOTÓN  ║ │
+│  ║                    ║    ║  (Deshabilitado si no hay docs)         ║ │
+│  ║ [Procesar archivos]║    ║                                          ║ │
+│  ║                    ║    ║ [🔄 Página 1 de 1]                      ║ │
+│  ║                    ║    ║                                          ║ │
+│  ╚════════════════════╝    ╚═══════════════════════════════════════════╝ │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+                              ↓ (Usuario hace clic en "Confirmar Documentos")
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      CONFIRMACIÓN EN PROGRESO                               │
+│                                                                             │
+│   Enviando solicitud al servidor...                                         │
+│   [████████████████████████████████████████████████] 100%                  │
+│                                                                             │
+│   POST /api/confirmar {                                                     │
+│     archivos: ["Res_001.pdf", "Res_002.pdf", "Res_003.pdf"],              │
+│     usuario_id: 1                                                           │
+│   }                                                                          │
+│                                                                             │
+│   Respuesta del servidor:                                                   │
+│   ✓ 3 documento(s) confirmado(s) exitosamente.                            │
+│                                                                             │
+│   BD: UPDATE resoluciones_extraidas SET confirmado = true WHERE ...       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+                    ↓ (Cambio automático de vista)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│           APLICACIÓN PRINCIPAL - VISTA "DOCUMENTOS CONFIRMADOS"             │
+│                          (Pestaña #2 - Ahora Activa)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────┐   │
+│  │  🏠 Lector v1.0  [Excel↓]  [Juan Pérez  ⬅️ Salir]               │   │
+│  └────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────┬─────────────────────────────────────────────────┐   │
+│  │  📤 PROCESAR    │  ✓ CONFIRMADOS  (Nueva pestaña - Activa)     │   │
+│  │                 │                                               │   │
+│  └─────────────────┴─────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ╔═══════════════════════════════════════════════════════════════════════╗ │
+│  ║  DOCUMENTOS CONFIRMADOS (3 documentos confirmados)                    ║ │
+│  ║                                                                        ║ │
+│  ║  #  Archivo    Número         Párrafo                 Firma  Estado  ║ │
+│  ║ ───────────────────────────────────────────────────────────────────── ║ │
+│  ║  1  Res_001.pdf 05285-06-2026 "La Secretaría declara..." ✓ Confirmado║ │
+│  ║  2  Res_002.pdf 05286-06-2026 "El presente acto se..." ✓ Confirmado  ║ │
+│  ║  3  Res_003.pdf 05287-06-2026 "Considerando que..."    ✓ Confirmado  ║ │
+│  ║                                                                        ║ │
+│  ║ [🔄 Página 1 de 1]                                                   ║ │
+│  ║                                                                        ║ │
+│  ║ Acciones:                                                             ║ │
+│  ║ - Ver PDF original: [Ver PDF]                                        ║ │
+│  ║ - Ampliar firma: Haz clic en miniatura                               ║ │
+│  ║ - Exportar a Excel: Botón en header                                  ║ │
+│  ║                                                                        ║ │
+│  ╚═══════════════════════════════════════════════════════════════════════╝ │
+│                                                                             │
+│  Panel izquierdo OCULTO (solo en vista Procesar)                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              TRANSICIÓN: Volver a "PROCESAR" (Pestaña #1)                   │
+│                                                                             │
+│  Usuario hace clic en: 📤 PROCESAR                                          │
+│                                                                             │
+│  → Panel izquierdo se muestra nuevamente                                    │
+│  → Tabla de resultados está vacía (confirmados fueron limpiados)           │
+│  → Botón "Confirmar Documentos" deshabilitado                              │
+│  → Listo para procesar más documentos                                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                          FLUJO TÉCNICO (Backend)                             ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+
+1. CARGA Y PROCESAMIENTO INICIAL
+   ═════════════════════════════════════════════════════════════════════════
+   Cliente (Frontend)          Servidor (PHP/PostgreSQL)
+   ─────────────────          ────────────────────────
+   
+   Selecciona PDFs
+          ↓
+   POST /api/upload ────────→ Guarda en storage/temp/uploads/
+                             ↓
+                  POST /api/extract
+                             ↓
+                  1. Convierte a imágenes
+                  2. Ejecuta OCR
+                  3. Extrae datos
+                  4. INSERT INTO resoluciones_extraidas
+                     (confirmado = FALSE, usuario_id = 1)
+                             ↓
+   ←──────────── Respuesta JSON con resultados
+        ↓
+   Renderiza tabla
+   Habilita botón "Confirmar"
+
+
+2. CONFIRMACIÓN DE DOCUMENTOS
+   ═════════════════════════════════════════════════════════════════════════
+   Cliente (Frontend)          Servidor (PHP/PostgreSQL)
+   ─────────────────          ────────────────────────
+   
+   Usuario: [Confirmar Documentos]
+        ↓
+   POST /api/confirmar ────→ Recibe:
+   {                          {
+     archivos: [...],           archivos: [Res_001.pdf, Res_002.pdf],
+     usuario_id: 1              usuario_id: 1
+   }                          }
+                             ↓
+                    Para cada archivo:
+                    UPDATE resoluciones_extraidas
+                    SET confirmado = true
+                    WHERE archivo = ? AND usuario_id = ?
+                             ↓
+   ←──────────── Respuesta:
+   {                        {
+     success: true,           success: true,
+     confirmados: 3,          confirmados: 3,
+     message: "..."           message: "Se confirmaron 3 documento(s)."
+   }                        }
+        ↓
+   Limpia tabla procesamiento
+   Cambia a vista "Confirmados"
+   GET /api/resoluciones-confirmadas ────→ SELECT *
+                                           WHERE usuario_id = 1
+                                           AND confirmado = TRUE
+                                                ↓
+                                           ←────────────────
+   Renderiza tabla de confirmados
+
+
+3. OBTENER DOCUMENTOS CONFIRMADOS
+   ═════════════════════════════════════════════════════════════════════════
+   Cliente                     Servidor
+   ───────                     ────────
+   
+   GET /api/resoluciones-confirmadas?usuario_id=1
+                        ↓
+                SELECT id, archivo, numero_resolucion,
+                       primer_parrafo, firmante, imagen_firma, estado
+                FROM resoluciones_extraidas
+                WHERE usuario_id = 1 AND confirmado = true
+                ORDER BY actualizado_en DESC
+                        ↓
+                ←─────────────────────────
+   Renderiza en tabla paginada
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                         CONSULTAS SQL CLAVE                                  ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+
+-- 1. Procesar nuevo documento
+INSERT INTO resoluciones_extraidas (
+  archivo, numero_resolucion, primer_parrafo, firmante, 
+  estado, usuario_id, confirmado, imagen_firma
+) VALUES (
+  'Res_001.pdf', '05285-06-2026', 'La Secretaría...', 'Juan Pérez',
+  'OK', 1, FALSE, 'firma_res_001.jpg'
+);
+
+
+-- 2. Confirmar documento
+UPDATE resoluciones_extraidas 
+SET confirmado = TRUE, actualizado_en = NOW()
+WHERE archivo = 'Res_001.pdf' AND usuario_id = 1;
+
+
+-- 3. Obtener sin confirmar (para vista Procesar)
+SELECT * FROM resoluciones_extraidas
+WHERE usuario_id = 1 AND confirmado = FALSE
+ORDER BY actualizado_en DESC;
+
+
+-- 4. Obtener confirmados (para vista Confirmados)
+SELECT * FROM resoluciones_extraidas
+WHERE usuario_id = 1 AND confirmado = TRUE
+ORDER BY actualizado_en DESC;
+
+
+-- 5. Estadísticas
+SELECT 
+  COUNT(*) FILTER (WHERE confirmado = FALSE) as sin_confirmar,
+  COUNT(*) FILTER (WHERE confirmado = TRUE) as confirmados,
+  COUNT(*) as total
+FROM resoluciones_extraidas
+WHERE usuario_id = 1;
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                      CICLO DE VIDA DE UN DOCUMENTO                           ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+
+1. NUEVO                  2. PROCESADO              3. CONFIRMADO
+   ────────                  ───────────                ──────────
+   
+   PDF en disco          Vista "Procesar"           Vista "Confirmados"
+        ↓                      ↓                            ↓
+   Carga al servidor    Tabla con resultado    Tabla permanente
+        ↓                      ↓                            ↓
+   BD: confirmado=F     BD: confirmado=F       BD: confirmado=T
+   usuario_id=1         usuario_id=1           usuario_id=1
+        ↓                      ↓                            ↓
+   Usuario revisa       Botón Confirmar    Botón disponible
+   resultado            activo                  para exportar
+        ↓                      ↓
+   Puede cancelar      Hace clic confirmación
+   o confirmar
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                         CASOS DE USO COMUNES                                 ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+
+CASO 1: Usuario procesa y confirma documentos
+────────────────────────────────────────────
+1. Carga 3 PDFs
+2. Hace clic "Procesar archivos"
+3. Sistema convierte, OCR y extrae
+4. Ve resultados en tabla (status: OK)
+5. Hace clic "Confirmar Documentos"
+6. Se guardan como confirmados
+7. Cambia a vista "Confirmados"
+8. Puede exportar Excel o continuar
+
+
+CASO 2: Usuario procesa pero revisa antes de confirmar
+──────────────────────────────────────────────────
+1. Carga 3 PDFs
+2. Procesa
+3. Revisa datos extraídos
+4. Nota un error en el documento #2
+5. Hace clic "Cancelar" (quita ese documento de tabla)
+6. Carga el PDF corregido y reprocesa
+7. Confirma los 3 documentos corregidos
+
+
+CASO 3: Usuario regresa después de procesar
+─────────────────────────────────────────
+1. Abre la aplicación (nueva sesión)
+2. Inicia sesión
+3. Ve pestaña "Confirmados" con sus documentos previos
+4. Puede exportar, revisar o procesar más
+
+
+CASO 4: Múltiples usuarios
+─────────────────────────
+Juan Pérez:                  María García:
+- Procesa 5 docs         - Procesa 3 docs
+- Confirma 5             - Confirma 2 (1 en revisión)
+- BD: usuario_id=1       - BD: usuario_id=2
+                         
+Cada usuario ve solo      Completamente separados
+sus documentos           en la BD gracias a usuario_id
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                            BOTONES Y ACCIONES                                ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+
+VISTA "PROCESAR DOCUMENTOS"
+───────────────────────────────
+
+┌─ HEADER ─────────────────────────────────────────────────────────┐
+│                                                                  │
+│  [Excel↓]  [Juan Pérez ⬅️]                                      │
+│  (Exportar a Excel de TODO lo procesado)                        │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ PANEL IZQUIERDO ─────────────────────────────────────────────────┐
+│                                                                    │
+│  CARGA DE ARCHIVOS                                                │
+│  ───────────────────                                              │
+│  [Drag & Drop]                                                    │
+│  [Seleccionar]                                                    │
+│  [Procesar archivos] ← Inicia todo el pipeline                   │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+┌─ TABLA DE RESULTADOS ─────────────────────────────────────────────┐
+│                                                                    │
+│  [✓ CONFIRMAR DOCUMENTOS] ← NUEVO BOTÓN                          │
+│  (Verde, deshabilitado si tabla vacía)                           │
+│                                                                    │
+│  Tabla con:                                                       │
+│  - #, Archivo, Número, Párrafo, Firmante, Firma, Estado        │
+│  - Botón "Ver PDF" por documento                                │
+│  - Botón "Cancelar" para quitar de tabla                        │
+│                                                                    │
+│  [Página 1 de 5] [< Anterior] [Siguiente >]                    │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+
+VISTA "DOCUMENTOS CONFIRMADOS"
+──────────────────────────────────
+
+┌─ HEADER ─────────────────────────────────────────────────────────┐
+│                                                                  │
+│  [Excel↓]  [Juan Pérez ⬅️]                                      │
+│  (Exportar confirmados)                                          │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ TABLA DE CONFIRMADOS ───────────────────────────────────────────┐
+│                                                                  │
+│  Tabla con:                                                     │
+│  - #, Archivo, Número, Párrafo, Firmante, Firma, Estado       │
+│  - Botón "Ver PDF" por documento (solo lectura)                │
+│  - NO hay botón Cancelar (ya confirmado)                       │
+│                                                                  │
+│  [Página 1 de 3] [< Anterior] [Siguiente >]                   │
+│                                                                  │
+│  (Panel izquierdo OCULTO)                                      │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+¡SISTEMA LISTO! Todas las funcionalidades están operativas.
+Ejecuta: php run-migrations.php
+Inicia: php -S 127.0.0.1:5001
+
+═══════════════════════════════════════════════════════════════════════════════

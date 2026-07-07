@@ -59,8 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateStatsText({enabled: true, saved: data.results.length});
                     if (data.results.length > 0) {
                         exportBtn.disabled = false;
+                        if (btnConfirmar) btnConfirmar.disabled = false;
                     } else {
                         exportBtn.disabled = true;
+                        if (btnConfirmar) btnConfirmar.disabled = true;
                     }
                 }
             })
@@ -151,6 +153,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnNextPage = document.getElementById('btn-next-page');
     const pageInfo = document.getElementById('page-info');
 
+    // Navigation Elements
+    const navTabProcesar = document.getElementById('nav-tab-procesar');
+    const navTabConfirmados = document.getElementById('nav-tab-confirmados');
+    const viewProcesar = document.getElementById('view-procesar');
+    const viewConfirmados = document.getElementById('view-confirmados');
+    const uploadPanel = document.getElementById('upload-panel');
+    const btnConfirmar = document.getElementById('btn-confirmar');
+
+    // Confirmados Elements
+    const tableBodyConfirmados = document.getElementById('results-table-body-confirmados');
+    const emptyStateConfirmados = document.getElementById('empty-state-confirmados');
+    const statsTextConfirmados = document.getElementById('stats-text-confirmados');
+    const paginationContainerConfirmados = document.getElementById('pagination-container-confirmados');
+    const btnPrevPageConfirmados = document.getElementById('btn-prev-page-confirmados');
+    const btnNextPageConfirmados = document.getElementById('btn-next-page-confirmados');
+    const pageInfoConfirmados = document.getElementById('page-info-confirmados');
+
     // State
     let selectedFiles = [];
     let isUploading = false;
@@ -162,6 +181,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${API_BASE_URL}${path}`;
     }
     let extractionResults = []; // Almacena los resultados de la última extracción para exportar
+    let confirmedResults = []; // Almacena documentos confirmados
+    let currentView = 'procesar'; // 'procesar' o 'confirmados'
+    let currentPageConfirmados = 1;
 
     // Ejecutar verificación de autenticación inicial (ahora de forma segura tras declarar las variables)
     checkAuth();
@@ -594,12 +616,14 @@ document.addEventListener('DOMContentLoaded', () => {
             emptyState.style.display = 'flex';
             tableBody.innerHTML = '';
             paginationContainer.style.display = 'none';
+            if (btnConfirmar) btnConfirmar.disabled = true;
             return;
         }
         
         emptyState.style.display = 'none';
         currentPage = page;
         renderTablePage(currentPage);
+        if (btnConfirmar) btnConfirmar.disabled = false;
     }
 
     /**
@@ -918,5 +942,288 @@ document.addEventListener('DOMContentLoaded', () => {
             if (lightbox) lightbox.style.display = 'none';
         });
     }
+
+    // =========================================================================
+    // NAVEGACIÓN ENTRE VISTAS
+    // =========================================================================
+
+    /**
+     * Cambia entre las vistas de Procesar y Confirmados
+     */
+    function switchView(view) {
+        currentView = view;
+
+        if (view === 'procesar') {
+            // Mostrar vista de procesar
+            navTabProcesar.classList.add('active');
+            navTabConfirmados.classList.remove('active');
+            viewProcesar.style.display = 'flex';
+            viewConfirmados.style.display = 'none';
+            uploadPanel.style.display = 'flex';
+        } else if (view === 'confirmados') {
+            // Mostrar vista de confirmados
+            navTabProcesar.classList.remove('active');
+            navTabConfirmados.classList.add('active');
+            viewProcesar.style.display = 'none';
+            viewConfirmados.style.display = 'flex';
+            uploadPanel.style.display = 'none';
+            
+            // Cargar documentos confirmados
+            cargarDocumentosConfirmados();
+        }
+    }
+
+    // Event listeners para navegación
+    if (navTabProcesar) {
+        navTabProcesar.addEventListener('click', () => switchView('procesar'));
+    }
+
+    if (navTabConfirmados) {
+        navTabConfirmados.addEventListener('click', () => switchView('confirmados'));
+    }
+
+    // =========================================================================
+    // CONFIRMAR DOCUMENTOS
+    // =========================================================================
+
+    /**
+     * Confirma los documentos procesados y los mueve a la vista de confirmados
+     */
+    function confirmarDocumentos() {
+        if (extractionResults.length === 0) {
+            showToast('No hay documentos para confirmar.', 'warning');
+            return;
+        }
+
+        if (!currentUser || !currentUser.id) {
+            showToast('Debes iniciar sesión para confirmar documentos.', 'error');
+            return;
+        }
+
+        btnConfirmar.disabled = true;
+        const originalContent = btnConfirmar.innerHTML;
+        btnConfirmar.innerHTML = '<div class="spinner" style="border-top-color: var(--success-color); border-color: rgba(16,185,129,0.3);"></div> Confirmando...';
+
+        const archivos = extractionResults.map(r => r.archivo).filter(a => a);
+
+        fetch(apiUrl('/api/confirmar'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ 
+                archivos: archivos,
+                usuario_id: currentUser.id
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const confirmadosCount = data.confirmados || archivos.length;
+                showToast(`${confirmadosCount} documento(s) confirmado(s) exitosamente.`, 'success');
+                
+                // Limpiar la tabla de procesamiento
+                extractionResults = [];
+                renderExtractionResults([]);
+                updateStatsText();
+                exportBtn.disabled = true;
+                btnConfirmar.disabled = true;
+                
+                // Cambiar a la vista de confirmados automáticamente
+                setTimeout(() => {
+                    switchView('confirmados');
+                }, 500);
+            } else {
+                showToast(data.error || 'Error al confirmar documentos.', 'error');
+            }
+        })
+        .catch(err => {
+            showToast('Error de conexión al confirmar documentos.', 'error');
+            console.error('Error:', err);
+        })
+        .finally(() => {
+            btnConfirmar.innerHTML = originalContent;
+            btnConfirmar.disabled = extractionResults.length === 0;
+        });
+    }
+
+    // Event listener para botón de confirmar
+    if (btnConfirmar) {
+        btnConfirmar.addEventListener('click', confirmarDocumentos);
+    }
+
+    // =========================================================================
+    // CARGAR Y RENDERIZAR DOCUMENTOS CONFIRMADOS
+    // =========================================================================
+
+    /**
+     * Carga los documentos confirmados desde el servidor
+     */
+    function cargarDocumentosConfirmados() {
+        if (!currentUser || !currentUser.id) {
+            confirmedResults = [];
+            renderConfirmedResults([]);
+            return;
+        }
+
+        fetch(apiUrl(`/api/resoluciones-confirmadas?usuario_id=${currentUser.id}`))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.results) {
+                    confirmedResults = data.results;
+                    renderConfirmedResults(confirmedResults);
+                } else {
+                    confirmedResults = [];
+                    renderConfirmedResults([]);
+                }
+            })
+            .catch(err => {
+                console.error('Error al cargar documentos confirmados:', err);
+                showToast('Error al cargar documentos confirmados.', 'error');
+                confirmedResults = [];
+                renderConfirmedResults([]);
+            });
+    }
+
+    /**
+     * Renderiza los documentos confirmados en su tabla
+     */
+    function renderConfirmedResults(results, page = 1) {
+        if (results.length === 0) {
+            emptyStateConfirmados.style.display = 'flex';
+            tableBodyConfirmados.innerHTML = '';
+            paginationContainerConfirmados.style.display = 'none';
+            statsTextConfirmados.textContent = 'Sin documentos confirmados';
+            return;
+        }
+        
+        emptyStateConfirmados.style.display = 'none';
+        currentPageConfirmados = page;
+        renderTablePageConfirmados(currentPageConfirmados);
+        updateStatsTextConfirmados();
+    }
+
+    /**
+     * Renderiza una página de documentos confirmados
+     */
+    function renderTablePageConfirmados(page) {
+        const totalPages = Math.ceil(confirmedResults.length / itemsPerPage);
+        
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+        
+        currentPageConfirmados = page;
+        
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, confirmedResults.length);
+        
+        const pageResults = confirmedResults.slice(startIndex, endIndex);
+        
+        tableBodyConfirmados.innerHTML = '';
+
+        pageResults.forEach((result, index) => {
+            const globalIndex = startIndex + index + 1;
+            
+            const row = document.createElement('tr');
+            const isOk = result.estado === 'OK';
+            
+            const displayName = cleanFileName(result.archivo || 'Desconocido');
+            const numRes = result.numero_resolucion || '—';
+            const numResClass = result.numero_resolucion ? '' : 'style="color: var(--text-muted); font-style: italic;"';
+            const parrafo = result.primer_parrafo || '';
+            const parrafoDisplay = parrafo || '—';
+            const parrafoAttr = parrafo ? `title="${escapeHtml(parrafo)}"` : 'style="color: var(--text-muted); font-style: italic;"';
+            const firmante = result.firmante || '—';
+            const firmanteClass = result.firmante ? '' : 'style="color: var(--text-muted); font-style: italic;"';
+
+            let firmaOriginalHtml = '<span style="color: var(--text-muted); font-style: italic;">No disp.</span>';
+            if (result.imagen_firma) {
+                const imgUrl = apiUrl(`/signatures/${result.imagen_firma}`);
+                firmaOriginalHtml = `
+                    <div class="firma-thumbnail-container" onclick="openFirmaLightbox('${imgUrl}')" title="Ver firma">
+                        <img src="${imgUrl}" alt="Firma" class="firma-thumbnail-img" onerror="this.parentElement.innerHTML='<span style=\\'color:var(--text-muted)\\'>No disp.</span>'">
+                        <div class="firma-thumbnail-overlay">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                <line x1="11" y1="8" x2="11" y2="14"></line>
+                                <line x1="8" y1="11" x2="14" y2="11"></line>
+                            </svg>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const badgeClass = isOk ? 'badge-success' : 'badge-error';
+            const badgeText = isOk ? 'Confirmado' : 'Error';
+            
+            const pdfUrl = result.archivo ? apiUrl(`/api/view-pdf?file=${encodeURIComponent(result.archivo)}`) : '#';
+            const actionBtn = result.archivo 
+                ? `<a href="${pdfUrl}" target="_blank" class="btn btn-secondary btn-sm" title="Ver PDF Original" style="text-decoration: none;">Ver PDF</a>`
+                : `<span style="color: var(--text-muted); font-size: 0.8rem;">No disp.</span>`;
+
+            row.innerHTML = `
+                <td style="color: var(--text-secondary); font-weight: 500;">${globalIndex}</td>
+                <td style="font-weight: 500;" title="${escapeHtml(result.archivo || '')}">${displayName}</td>
+                <td ${numResClass}><span class="resolution-number">${escapeHtml(numRes)}</span></td>
+                <td class="paragraph-cell" ${parrafoAttr}>${escapeHtml(parrafoDisplay)}</td>
+                <td ${firmanteClass}>${escapeHtml(firmante)}</td>
+                <td>${firmaOriginalHtml}</td>
+                <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                <td><div class="action-buttons">${actionBtn}</div></td>
+            `;
+
+            if (!isOk && result.mensaje) {
+                row.title = result.mensaje;
+                row.style.opacity = '0.7';
+            }
+
+            tableBodyConfirmados.appendChild(row);
+        });
+        
+        if (totalPages > 1) {
+            paginationContainerConfirmados.style.display = 'flex';
+            pageInfoConfirmados.textContent = `Página ${currentPageConfirmados} de ${totalPages}`;
+            btnPrevPageConfirmados.disabled = currentPageConfirmados === 1;
+            btnNextPageConfirmados.disabled = currentPageConfirmados === totalPages;
+        } else {
+            paginationContainerConfirmados.style.display = 'none';
+        }
+    }
+
+    /**
+     * Actualiza el texto de estadísticas de documentos confirmados
+     */
+    function updateStatsTextConfirmados() {
+        const okCount = confirmedResults.filter(r => r.estado === 'OK').length;
+        const errCount = confirmedResults.length - okCount;
+
+        let statsMsg = `${confirmedResults.length} documento(s) confirmado(s)`;
+        if (okCount > 0) statsMsg += ` · ${okCount} exitoso(s)`;
+        if (errCount > 0) statsMsg += ` · ${errCount} con error`;
+        
+        statsTextConfirmados.textContent = statsMsg;
+    }
+
+    // Event listeners para paginación de confirmados
+    if (btnPrevPageConfirmados) {
+        btnPrevPageConfirmados.addEventListener('click', () => {
+            if (currentPageConfirmados > 1) {
+                renderTablePageConfirmados(currentPageConfirmados - 1);
+            }
+        });
+    }
+
+    if (btnNextPageConfirmados) {
+        btnNextPageConfirmados.addEventListener('click', () => {
+            const totalPages = Math.ceil(confirmedResults.length / itemsPerPage);
+            if (currentPageConfirmados < totalPages) {
+                renderTablePageConfirmados(currentPageConfirmados + 1);
+            }
+        });
+    }
+
+    // El botón Confirmar se habilita/deshabilita dentro de renderExtractionResults directamente.
 
 });

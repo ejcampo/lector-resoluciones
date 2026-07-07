@@ -85,6 +85,18 @@ if ($requestUri === '/api/export') {
     exit;
 }
 
+if ($requestUri === '/api/confirmar') {
+    $controller = new \App\Controllers\ResolucionesController();
+    $controller->confirmarDocumentos();
+    exit;
+}
+
+if ($requestUri === '/api/resoluciones-confirmadas') {
+    $controller = new \App\Controllers\ResolucionesController();
+    $controller->getConfirmedResolutions();
+    exit;
+}
+
 if ($requestUri === '/api/view-pdf') {
     $file = $_GET['file'] ?? '';
     // Prevent directory traversal

@@ -60,6 +60,63 @@ body {
     z-index: 100;
 }
 
+/* Navigation Tabs */
+.app-nav {
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 2rem;
+    position: sticky;
+    top: 73px;
+    z-index: 99;
+}
+
+.nav-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.nav-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-family);
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 3px solid transparent;
+    transition: all var(--transition-speed);
+    position: relative;
+}
+
+.nav-tab svg {
+    transition: transform var(--transition-speed);
+}
+
+.nav-tab:hover {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.nav-tab:hover svg {
+    transform: translateY(-2px);
+}
+
+.nav-tab.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    background-color: rgba(99, 102, 241, 0.08);
+}
+
+.nav-tab.active svg {
+    color: var(--accent-color);
+}
+
 .header-container {
     max-width: 1400px;
     margin: 0 auto;
@@ -472,12 +529,41 @@ body {
     cursor: not-allowed;
 }
 
+.btn-success {
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: var(--success-color);
+    width: auto;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: var(--success-color);
+    color: white;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+    transform: translateY(-1px);
+}
+
+.btn-success:disabled {
+    background-color: rgba(30, 41, 59, 0.5);
+    border-color: var(--border-color);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 /* Results Content Area */
 .results-panel {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
     min-width: 0;
+}
+
+/* Cuando está en vista de confirmados y panel está oculto */
+.app-container:has(#view-confirmados:not([style*="display: none"])) {
+    grid-template-columns: 1fr;
+    padding: 1.5rem 2.5rem 2rem;
 }
 
 .results-header {
@@ -507,6 +593,10 @@ body {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
+#view-confirmados .table-card {
+    min-height: 600px;
+}
+
 .table-container {
     overflow-x: auto;
     flex: 1;
@@ -515,12 +605,20 @@ body {
     background-color: rgba(15, 23, 42, 0.22);
 }
 
+#view-confirmados .table-container {
+    flex: 1 1 100%;
+}
+
 table {
     width: 100%;
     min-width: 1280px;
     border-collapse: collapse;
     text-align: left;
     font-size: 0.9rem;
+}
+
+#view-confirmados table {
+    min-width: 100%;
 }
 
 th {
@@ -532,11 +630,19 @@ th {
     white-space: nowrap;
 }
 
+#view-confirmados th {
+    padding: 1.2rem 1rem;
+}
+
 td {
     padding: 0.95rem 1rem;
     border-bottom: 1px solid rgba(51, 65, 85, 0.5);
     color: var(--text-primary);
     vertical-align: middle;
+}
+
+#view-confirmados td {
+    padding: 1.2rem 1rem;
 }
 
 tr:last-child td {

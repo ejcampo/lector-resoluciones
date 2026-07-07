@@ -1,22 +1,22 @@
 {
-    "generado_en": "2026-07-07 03:36:11",
+    "generado_en": "2026-07-07 14:19:15",
     "debug_mode": true,
-    "tiempo_total_pipeline_ms": 10554.44,
+    "tiempo_total_pipeline_ms": 6205.57,
     "total_documentos": 1,
     "documentos": [
         {
-            "archivo": "RS-04612-05-2026.pdf",
-            "cantidad_paginas": 2,
+            "archivo": "RS-05285-06-2026__2_.pdf",
+            "cantidad_paginas": 7,
             "imagenes_generadas": 2,
             "estado_conversion": "Completado",
             "error_conversion": null,
-            "tiempo_ocr_ms": 9125.33,
+            "tiempo_ocr_ms": 5249.53,
             "estado_final": "OK",
             "error_final": null,
             "datos_extraidos": {
-                "numero_resolucion": "1",
-                "primer_parrafo": "LA SECRETARIA DE EDUCACIÓN Y CULTURA DEL DEPARTAMENTO DEL CAUCA, en ejerciciode sus atribuciones legalesy en especiallas conferidasen el Decreto Departamental No. 0142 del 17 de febrerode 2025, y",
-                "firmante": "Q @CobCauca"
+                "numero_resolucion": "05285-06-2026",
+                "primer_parrafo": "LA SECRETARIA DE EDUCACIÓN Y CULTURA DEL DEPARTAMENTO DEL CAUCA, en ejerciciode sus atribuciones legales, de conformidadcon lo establecidoen la Ley 115 de 1994, Sentencia SU 245 del 2021, Decreto 1345 del 2023, Decreto 0300 del 2026 y las contenidasen el Decreto Departamental No. 0142 del 17 de febrerode 2025, y",
+                "firmante": ""
             }
         }
     ]
