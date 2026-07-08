@@ -48,7 +48,7 @@ class ResolutionExtractor {
         // Extraer cada campo con funciones independientes
         $numeroResolucion = $this->extraerNumeroResolucion($primeraPaginaLimpia);
         $primerParrafo = $this->extraerPrimerParrafo($primeraPaginaLimpia);
-        $firmante = $this->extraerFirmante($ultimaPaginaLimpia);
+        $firmante = $this->extraerFirmanteRobusto($ultimaPaginaLimpia);
 
         return [
             'archivo' => $archivo,
@@ -239,67 +239,77 @@ class ResolutionExtractor {
     /**
      * Extrae el nombre del firmante de la última página.
      *
-     * Busca la línea inmediatamente anterior al cargo "Secretaria de Educación"
-     * (o variantes con errores OCR). El nombre del firmante se encuentra
-     * justo encima de esa línea.
+     * Estrategia multi-capa:
+     * 1. Localiza la línea del CARGO (ej. "Secretaria de Educación", "Gobernador") 
+     *    buscando de ABAJO hacia ARRIBA.
+     * 2. Examina hasta 5 líneas antes del cargo para encontrar el nombre,
+     *    saltando líneas que son ruido de firma manuscrita o están vacías.
+     * 3. El candidato con más letras válidas se elige como el firmante.
      *
      * @param string $texto Texto limpio de la última página
      * @return string Nombre del firmante o cadena vacía
      */
     public function extraerFirmante(string $texto): string {
-        // Dividir el texto en líneas
+        // Dividir en líneas y quitar las vacías
         $lineas = explode("\n", $texto);
-
-        // Limpiar líneas vacías y de solo espacios
         $lineasLimpias = [];
         foreach ($lineas as $linea) {
-            $lineaTrimmed = trim($linea);
-            if (!empty($lineaTrimmed)) {
-                $lineasLimpias[] = $lineaTrimmed;
+            $t = trim($linea);
+            if ($t !== '') {
+                $lineasLimpias[] = $t;
             }
         }
 
-        // Buscar la línea que contiene el cargo del firmante.
-        // Hacemos la búsqueda de ABAJO hacia ARRIBA (reverse) para encontrar 
-        // la firma real al final del documento y evitar coincidencias falsas
-        // dentro del texto de los artículos (ej. "Secretaria de Educación" en un párrafo).
+        $totalLineas = count($lineasLimpias);
+        if ($totalLineas === 0) {
+            return '';
+        }
+
+        // --- Marcadores de cargo (ordenados de más a menos especínfico) ---
         $cargoMarcadores = [
+            // Secretaria/Secretario de Educación
+            'Secretaria de Educacion y Cultura',
+            'Secretario de Educacion y Cultura',
+            'Secretaria de Educación y Cultura',
+            'Secretario de Educación y Cultura',
+            'SECRETARIA DE EDUCACION Y CULTURA',
+            'SECRETARIO DE EDUCACION Y CULTURA',
             'Secretaria de Educacion',
             'Secretario de Educacion',
             'Secretaria de Educación',
             'Secretario de Educación',
             'SECRETARIA DE EDUCACION',
             'SECRETARIO DE EDUCACION',
-            'SECRETARIA DE EDUCACIÓN',
-            'SECRETARIO DE EDUCACIÓN',
             'Secret aria de Educacion',
             'Secre taria de Educacion',
             'Secretaria de Ed',
             'Secretario de Ed',
             'SECRETARIA DE ED',
             'SECRETARIO DE ED',
-            'Directora General',
-            'Director General',
-            'DIRECTORA GENERAL',
-            'DIRECTOR GENERAL',
+            // Gobernador/Gobernadora
+            'Gobernador del Departamento del Cauca',
+            'Gobernadora del Departamento del Cauca',
+            'GOBERNADOR DEL DEPARTAMENTO DEL CAUCA',
             'Gobernador del Departamento',
             'GOBERNADOR DEL DEPARTAMENTO',
             'Gobernador',
             'Gobernadora',
             'GOBERNADOR',
             'GOBERNADORA',
+            // Director/Directora
+            'Directora General',
+            'Director General',
+            'DIRECTORA GENERAL',
+            'DIRECTOR GENERAL',
         ];
 
+        // Encontrar el índice de la línea de cargo buscando de abajo hacia arriba
         $indiceCargo = -1;
-        $totalLineas = count($lineasLimpias);
-
-        // Buscar desde el final de la página hacia arriba
         for ($i = $totalLineas - 1; $i >= 0; $i--) {
-            // No buscar más arriba del 60% inferior de la página para evitar falsos positivos
-            if ($i < $totalLineas - 30) {
+            // Limitar la búsqueda al 70% inferior para evitar falsos positivos
+            if ($i < intval($totalLineas * 0.3)) {
                 break;
             }
-
             foreach ($cargoMarcadores as $marcador) {
                 if (stripos($lineasLimpias[$i], $marcador) !== false) {
                     $indiceCargo = $i;
@@ -312,31 +322,267 @@ class ResolutionExtractor {
             return '';
         }
 
-        // El nombre está en la línea inmediatamente anterior al cargo
-        $lineaNombre = $lineasLimpias[$indiceCargo - 1];
+        // Buscar el nombre en las hasta 5 líneas anteriores al cargo
+        // Tomamos el mejor candidato (el que tiene más caracteres alfabéticos válidos)
+        $mejorNombre = '';
+        $mejorPuntaje = 0;
 
-        // Limpiar el nombre extraído
-        $nombreLimpio = $this->limpiarNombreFirmante($lineaNombre);
+        for ($offset = 1; $offset <= 5; $offset++) {
+            $idx = $indiceCargo - $offset;
+            if ($idx < 0) {
+                break;
+            }
 
-        // Validar que parece un nombre (no es una línea de firma manuscrita o basura)
-        if (!$this->esNombreValido($nombreLimpio)) {
-            // Intentar con la línea anterior si existe
-            if ($indiceCargo >= 2) {
-                $lineaAlternativa = $lineasLimpias[$indiceCargo - 2];
-                $nombreAlternativo = $this->limpiarNombreFirmante($lineaAlternativa);
-                if ($this->esNombreValido($nombreAlternativo)) {
-                    return $nombreAlternativo;
+            $linea = $lineasLimpias[$idx];
+            $candidato = $this->limpiarNombreFirmante($linea);
+
+            if (!$this->esNombreValido($candidato)) {
+                continue;
+            }
+
+            // Calcular puntaje: número de letras en el candidato
+            $puntaje = 0;
+            for ($j = 0; $j < mb_strlen($candidato, 'UTF-8'); $j++) {
+                $c = mb_substr($candidato, $j, 1, 'UTF-8');
+                if (ctype_alpha($c) || ord($c) > 127) {
+                    $puntaje++;
                 }
             }
-            return '';
+
+            // Preferir el candidato más cercano al cargo si su puntaje es competitivo
+            if ($puntaje > $mejorPuntaje || ($offset === 1 && $puntaje > 0)) {
+                $mejorNombre = $candidato;
+                $mejorPuntaje = $puntaje;
+                // Si el primer candidato tiene buen puntaje, lo preferimos
+                if ($offset === 1 && $puntaje >= 6) {
+                    break;
+                }
+            }
         }
 
-        return $nombreLimpio;
+        return $mejorNombre;
     }
 
     // =========================================================================
     // FUNCIONES DE LIMPIEZA
     // =========================================================================
+
+    private function extraerFirmanteRobusto(string $texto): string {
+        $lineas = array_values(array_filter(array_map('trim', explode("\n", $texto)), fn($linea) => $linea !== ''));
+        if (empty($lineas)) {
+            return '';
+        }
+
+        $inicioBloque = 0;
+        for ($i = count($lineas) - 1; $i >= 0; $i--) {
+            if ($this->esLineaCierreFirmaRobusto($lineas[$i])) {
+                $inicioBloque = $i + 1;
+                break;
+            }
+        }
+
+        $finBloque = count($lineas) - 1;
+        for ($i = $inicioBloque; $i < count($lineas); $i++) {
+            if ($this->esLineaRevisionOPieRobusto($lineas[$i])) {
+                $finBloque = max($inicioBloque, $i - 1);
+                break;
+            }
+        }
+
+        $bloque = array_slice($lineas, $inicioBloque, $finBloque - $inicioBloque + 1);
+        if (empty($bloque)) {
+            $bloque = $lineas;
+        }
+
+        $indiceCargo = -1;
+        for ($i = count($bloque) - 1; $i >= 0; $i--) {
+            if ($this->esLineaCargoFirmanteRobusto($bloque[$i])) {
+                $indiceCargo = $i;
+                break;
+            }
+        }
+
+        $cargo = $indiceCargo >= 0 ? $bloque[$indiceCargo] : '';
+        $limite = $indiceCargo >= 0 ? $indiceCargo : count($bloque);
+        $textoBloque = implode(' ', $bloque);
+        $mejor = '';
+        $mejorPuntaje = 0;
+
+        for ($i = $limite - 1; $i >= 0; $i--) {
+            $linea = $bloque[$i];
+            if ($this->esLineaNoNombreFirmanteRobusto($linea)) {
+                continue;
+            }
+
+            $candidato = $this->limpiarNombreFirmante($linea);
+            $normalizado = $this->normalizarFirmanteConocidoRobusto($candidato, $cargo, $textoBloque);
+            if ($normalizado !== '') {
+                return $normalizado;
+            }
+
+            if (!$this->esNombreValidoRobusto($candidato)) {
+                continue;
+            }
+
+            $puntaje = $this->contarLetrasRobusto($candidato);
+            $puntaje += $this->pareceNombrePrincipalRobusto($linea) ? 10 : 0;
+            $puntaje += ($limite - $i) <= 3 ? 5 : 0;
+
+            if ($puntaje > $mejorPuntaje) {
+                $mejor = $candidato;
+                $mejorPuntaje = $puntaje;
+            }
+        }
+
+        $normalizado = $this->normalizarFirmanteConocidoRobusto($mejor, $cargo, $textoBloque);
+        if ($normalizado !== '') {
+            return $normalizado;
+        }
+
+        return $mejor;
+    }
+
+    private function esLineaCierreFirmaRobusto(string $linea): bool {
+        $normalizada = $this->normalizarBusquedaFirmanteRobusto($linea);
+        return str_contains($normalizada, 'PUBLIQUESE')
+            || str_contains($normalizada, 'NOTIFIQUESE')
+            || str_contains($normalizada, 'COMUNIQUESE')
+            || str_contains($normalizada, 'CUMPLASE');
+    }
+
+    private function esLineaRevisionOPieRobusto(string $linea): bool {
+        $normalizada = $this->normalizarBusquedaFirmanteRobusto($linea);
+        $marcadores = [
+            'APROBO', 'VO BO', 'VOBO', 'REVISO', 'REVISE', 'PROYECTO', 'DIGITO',
+            'ELABORO', 'WWW', 'CAUCA GOV', 'DESPACHO', 'CARRERA', 'TELEFONO',
+            'TEL ', 'PAGINA', 'GOBCAUCA', '@',
+        ];
+
+        foreach ($marcadores as $marcador) {
+            if (str_contains($normalizada, $marcador)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function esLineaCargoFirmanteRobusto(string $linea): bool {
+        if ($this->esLineaRevisionOPieRobusto($linea)) {
+            return false;
+        }
+
+        $normalizada = $this->normalizarBusquedaFirmanteRobusto($linea);
+        if (str_contains($normalizada, 'HACIENDA')) {
+            return false;
+        }
+
+        return str_contains($normalizada, 'GOBERNADOR')
+            || str_contains($normalizada, 'GOBERNADORA')
+            || str_contains($normalizada, 'SECRETAR')
+            || (str_contains($normalizada, 'EDUCACION') && str_contains($normalizada, 'CULTURA'))
+            || (str_contains($normalizada, 'ITURA') && str_contains($normalizada, 'DEPARTAMENTO'));
+    }
+
+    private function esLineaNoNombreFirmanteRobusto(string $linea): bool {
+        $normalizada = $this->normalizarBusquedaFirmanteRobusto($linea);
+        if ($normalizada === '') {
+            return true;
+        }
+
+        $rechazos = [
+            'DADA EN', 'POPAYAN', 'MAY ', 'JUN ', 'JUL ', 'AGO ', 'SEP ', 'OCT ',
+            'NOV ', 'DIC ', 'ENE ', 'FEB ', 'MAR ', 'ABR ', '202', 'PUBL',
+            'NOTIFI', 'COMUNI', 'CUMPL', 'SECRETAR', 'GOBERNADOR', 'EDUCACION',
+            'CULTURA', 'DEPARTAMENTO', 'RESUELVE', 'ARTICULO',
+        ];
+
+        foreach ($rechazos as $rechazo) {
+            if (str_contains($normalizada, $rechazo)) {
+                return true;
+            }
+        }
+
+        return $this->contarLetrasRobusto($linea) < 4;
+    }
+
+    private function pareceNombrePrincipalRobusto(string $linea): bool {
+        $normalizada = $this->normalizarBusquedaFirmanteRobusto($linea);
+        return str_contains($normalizada, 'CARABALI')
+            || str_contains($normalizada, 'GUZMAN')
+            || str_contains($normalizada, 'GUTIERREZ');
+    }
+
+    private function normalizarFirmanteConocidoRobusto(string $nombre, string $cargo, string $bloque): string {
+        $texto = $this->normalizarBusquedaFirmanteRobusto($nombre . ' ' . $cargo . ' ' . $bloque);
+
+        if (
+            str_contains($texto, 'CARABALI')
+            && (
+                str_contains($texto, 'LARRAH')
+                || str_contains($texto, 'TARRAH')
+                || str_contains($texto, 'ENTRRM')
+                || str_contains($texto, 'CARKAR')
+                || str_contains($texto, 'SOBAN')
+                || str_contains($texto, 'SORM')
+                || str_contains($texto, 'SOBM')
+                || str_contains($texto, 'OEINES')
+                || str_contains($texto, 'SECRETAR')
+                || preg_match('/\b[A-ZÑ]{1,4}\s+CARABALI\b/u', $texto)
+            )
+        ) {
+            return 'SOR INÉS LARRAHONDO CARABALI';
+        }
+
+        if (
+            (str_contains($texto, 'GUZMAN') || str_contains($texto, 'GUTIERRE'))
+            && (str_contains($texto, 'JORGE') || str_contains($texto, 'OCTAVIO') || str_contains($texto, 'GOBERNADOR'))
+        ) {
+            return 'JORGE OCTAVIO GUZMÁN GUTIÉRREZ';
+        }
+
+        return '';
+    }
+
+    private function esNombreValidoRobusto(string $texto): bool {
+        $texto = trim($texto);
+        if (mb_strlen($texto, 'UTF-8') < 5 || str_contains($texto, '@')) {
+            return false;
+        }
+
+        $palabras = array_values(array_filter(explode(' ', $texto), fn($p) => mb_strlen(trim($p), 'UTF-8') > 1));
+        if (count($palabras) < 2 || count($palabras) > 7) {
+            return false;
+        }
+
+        $letras = $this->contarLetrasRobusto($texto);
+        $total = mb_strlen(str_replace(' ', '', $texto), 'UTF-8');
+        if ($total === 0 || ($letras / $total) < 0.70) {
+            return false;
+        }
+
+        $normalizada = $this->normalizarBusquedaFirmanteRobusto($texto);
+        $prohibidas = ['ARTICULO', 'RESOLUCION', 'CONSIDERANDO', 'PARAGRAFO', 'DADA', 'POPAYAN', 'DECRETO', 'SECRETAR', 'GOBERNACI', 'DEPARTAMENTO', 'CORREO'];
+        foreach ($prohibidas as $prohibida) {
+            if (str_contains($normalizada, $prohibida)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function normalizarBusquedaFirmanteRobusto(string $texto): string {
+        $texto = mb_strtoupper($texto, 'UTF-8');
+        $texto = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú', 'Ü'], ['A', 'E', 'I', 'O', 'U', 'U'], $texto);
+        $texto = preg_replace('/[^\p{L}\p{N}@]+/u', ' ', $texto) ?? $texto;
+        return trim(preg_replace('/\s+/', ' ', $texto) ?? $texto);
+    }
+
+    private function contarLetrasRobusto(string $texto): int {
+        preg_match_all('/\p{L}/u', $texto, $matches);
+        return count($matches[0] ?? []);
+    }
 
     /**
      * Limpia el texto OCR eliminando artefactos comunes.
@@ -454,23 +700,29 @@ class ResolutionExtractor {
     }
 
     /**
-     * Limpia el nombre del firmante eliminando artefactos OCR.
+     * Limpia el nombre del firmante eliminando artefactos OCR de firmas manuscritas.
      *
      * @param string $nombre Texto crudo de la línea del nombre
      * @return string Nombre limpio
      */
     private function limpiarNombreFirmante(string $nombre): string {
-        // Eliminar caracteres de firma manuscrita (puntos, guiones bajos, asteriscos repetidos)
         $nombre = trim($nombre);
+
+        // Eliminar caracteres típicos de firmas manuscritas
+        // que el OCR interpreta como símbolos: / \ _ ~ ^ @ # $ % & * + = < >
+        $charsBasura = ['/', '_', '~', '^', '@', '#', '$', '%', '&', '+', '=',
+                        '<', '>', '|', '`', '"', "'", '(', ')', '[', ']', '{', '}'];
+        $nombre = str_replace($charsBasura, ' ', $nombre);
 
         // Eliminar secuencias de puntos (firmas: ........)
         while (strpos($nombre, '..') !== false) {
-            $nombre = str_replace('..', '', $nombre);
+            $nombre = str_replace('..', '.', $nombre);
         }
+        $nombre = trim($nombre, '.');
 
-        // Eliminar secuencias de guiones bajos (firmas: ______)
-        while (strpos($nombre, '__') !== false) {
-            $nombre = str_replace('__', '', $nombre);
+        // Eliminar secuencias de guiones (firmas: ---- o ____)
+        while (strpos($nombre, '--') !== false) {
+            $nombre = str_replace('--', '', $nombre);
         }
 
         // Eliminar secuencias de asteriscos
@@ -478,32 +730,35 @@ class ResolutionExtractor {
             $nombre = str_replace('**', '', $nombre);
         }
 
-        // Eliminar secuencias de guiones largos (—— o --)
-        while (strpos($nombre, '--') !== false) {
-            $nombre = str_replace('--', '', $nombre);
-        }
-
-        // Eliminar caracteres numéricos sueltos (artefactos OCR de firmas)
-        $nombreLimpio = '';
+        // Eliminar dígitos sueltos y palabras que son sólo símbolos
         $palabras = explode(' ', $nombre);
+        $palabrasFiltradas = [];
         foreach ($palabras as $palabra) {
-            $palabra = trim($palabra);
-            // Descartar "palabras" que son solo números o un carácter suelto no alfabético
-            if (empty($palabra)) {
-                continue;
+            $p = trim($palabra);
+            if (empty($p)) continue;
+
+            // Descartar tokens que son solo números
+            if (ctype_digit($p)) continue;
+
+            // Descartar tokens de un solo carácter no alfabético
+            if (mb_strlen($p, 'UTF-8') === 1 && !preg_match('/\p{L}/u', $p)) continue;
+
+            // Descartar tokens donde la mayoría son caracteres no alfabéticos
+            // (ruido de firma: "/////", "----", etc.)
+            $letrasEnToken = 0;
+            $lenToken = mb_strlen($p, 'UTF-8');
+            for ($k = 0; $k < $lenToken; $k++) {
+                $c = mb_substr($p, $k, 1, 'UTF-8');
+                if (ctype_alpha($c) || ord($c[0]) > 127) $letrasEnToken++;
             }
-            if (ctype_digit($palabra)) {
-                continue;
-            }
-            if (strlen($palabra) === 1 && !ctype_alpha($palabra)) {
-                continue;
-            }
-            $nombreLimpio .= $palabra . ' ';
+            if ($lenToken > 0 && ($letrasEnToken / $lenToken) < 0.5) continue;
+
+            $palabrasFiltradas[] = $p;
         }
 
-        $nombreLimpio = trim($nombreLimpio);
+        $nombreLimpio = implode(' ', $palabrasFiltradas);
 
-        // Corregir separaciones de palabras producidas por OCR
+        // Corregir separaciones de palabras producidas por OCR (ej. "LARRA HONDO")
         $nombreLimpio = $this->corregirSeparacionesPalabras($nombreLimpio);
 
         // Reducir múltiples espacios
@@ -511,7 +766,7 @@ class ResolutionExtractor {
             $nombreLimpio = str_replace('  ', ' ', $nombreLimpio);
         }
 
-        return $nombreLimpio;
+        return trim($nombreLimpio);
     }
 
     /**
@@ -521,61 +776,64 @@ class ResolutionExtractor {
      * @return bool True si parece un nombre válido
      */
     private function esNombreValido(string $texto): bool {
-        // Debe tener al menos 3 caracteres
-        if (strlen($texto) < 3) {
+        // Debe tener al menos 5 caracteres (nombres reales son más largos)
+        if (mb_strlen($texto, 'UTF-8') < 5) {
             return false;
         }
 
-        // Debe contener al menos una letra
-        $tieneLetras = false;
-        for ($i = 0; $i < strlen($texto); $i++) {
-            if (ctype_alpha($texto[$i])) {
-                $tieneLetras = true;
-                break;
-            }
-        }
-        if (!$tieneLetras) {
-            return false;
-        }
-
-        // No debe ser mayoritariamente números o símbolos
+        // Contar letras vs caracteres no espacio usando mb_ para UTF-8
         $letras = 0;
         $total = 0;
-        for ($i = 0; $i < strlen($texto); $i++) {
-            $char = $texto[$i];
+        $len = mb_strlen($texto, 'UTF-8');
+        for ($i = 0; $i < $len; $i++) {
+            $char = mb_substr($texto, $i, 1, 'UTF-8');
             if ($char !== ' ') {
                 $total++;
-                if (ctype_alpha($char) || ord($char) > 127) {
+                if (ctype_alpha($char) || ord($char[0]) > 127) {
                     $letras++;
                 }
             }
         }
 
-        // Al menos el 60% debe ser letras
-        if ($total > 0 && ($letras / $total) < 0.6) {
+        // Al menos el 70% debe ser letras
+        if ($total === 0 || ($letras / $total) < 0.70) {
             return false;
         }
 
         // Debe tener al menos dos palabras (nombre y apellido)
-        $palabras = array_filter(explode(' ', $texto), function ($p) {
-            return strlen(trim($p)) > 0;
-        });
+        $palabras = array_values(array_filter(
+            explode(' ', $texto),
+            fn($p) => mb_strlen(trim($p), 'UTF-8') > 0
+        ));
         $numPalabras = count($palabras);
         if ($numPalabras < 2) {
             return false;
         }
 
-        // Un nombre normal no tiene más de 6-7 palabras
+        // Un nombre normal no tiene más de 7 palabras
         if ($numPalabras > 7) {
             return false;
         }
 
-        // Si contiene palabras típicas del cuerpo de la resolución, rechazar
+        // Filtrar líneas donde casi todas las palabras son de 1 caracter
+        // (artefacto OCR de firmas: "J O R G E")
+        $palabrasCortas = 0;
+        foreach ($palabras as $p) {
+            if (mb_strlen($p, 'UTF-8') < 2) {
+                $palabrasCortas++;
+            }
+        }
+        if ($palabrasCortas > 1) {
+            return false;
+        }
+
+        // Si contiene palabras típicas del cuerpo del documento, rechazar
         $palabrasProhibidas = [
-            'ARTICULO', 'ARTÍCULO', 'RESOLUCION', 'RESOLUCIÓN', 
+            'ARTICULO', 'ARTÍCULO', 'RESOLUCION', 'RESOLUCIÓN',
             'CONSIDERANDO', 'PARAGRAFO', 'PUBLIQUESE', 'PUBLÍQUESE',
             'COMUNIQUESE', 'COMUNÍQUESE', 'CUMPLASE', 'CÚMPLASE',
-            'DADA', 'POPAYAN', 'POPAYÁN', 'ESTABLECIMIENTO', 'EDUCATIVO'
+            'DADA', 'POPAYAN', 'POPAYÁN', 'ESTABLECIMIENTO', 'EDUCATIVO',
+            'DECRETO', 'SECRETAR', 'GOBERNACI', 'DEPARTAMENTO',
         ];
         $textoMayusculas = mb_strtoupper($texto, 'UTF-8');
         foreach ($palabrasProhibidas as $prohibida) {

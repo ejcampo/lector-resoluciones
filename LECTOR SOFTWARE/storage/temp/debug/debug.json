@@ -1,21 +1,21 @@
 {
-    "generado_en": "2026-07-07 15:22:23",
+    "generado_en": "2026-07-08 14:26:14",
     "debug_mode": true,
-    "tiempo_total_pipeline_ms": 11385.5,
+    "tiempo_total_pipeline_ms": 10744.43,
     "total_documentos": 1,
     "documentos": [
         {
-            "archivo": "DC-0545-06-2026.pdf",
-            "cantidad_paginas": 5,
+            "archivo": "RS-04611-05-2026.pdf",
+            "cantidad_paginas": 2,
             "imagenes_generadas": 2,
             "estado_conversion": "Completado",
             "error_conversion": null,
-            "tiempo_ocr_ms": 9896.31,
+            "tiempo_ocr_ms": 9305.33,
             "estado_final": "OK",
             "error_final": null,
             "datos_extraidos": {
                 "numero_resolucion": "1",
-                "primer_parrafo": "Porel cualse efectúaun (1) nombramientoen Provisionalidad Vacancia Definitivacomo Docente Orientador (código 9003) enel marcodel programa “Sistemas Integradosde Educación Mediay Superior — SIMES”, dela Planta Globalde cargosdel Departamentodel Caucacon cargoal Sistema Generalde Participacionesdel Sector Educativo. EL GOBERNADOR DEL DEPARTAMENTO DEL CAUCA, en ejerciciode las facultades Constitucionalesdel articulo 305 y.legales, en especiallas conferidaspor la Ley 715 del 2001, y",
+                "primer_parrafo": "LA SECRETARIA DE EDUCACIÓN Y CULTURA DEL DEPARTAMENTO DEL CAUCA, en ejerciciode sus atribuciones legalesy en especiallas conferidasen el Decreto Departamental No. 0142 del 17 de febrerode 2025, y A -",
                 "firmante": ""
             }
         }

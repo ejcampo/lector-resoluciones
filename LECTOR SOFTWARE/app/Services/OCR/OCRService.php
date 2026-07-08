@@ -2,6 +2,7 @@
 
 namespace App\Services\OCR;
 
+use App\Helpers\PythonRuntime;
 use Exception;
 
 /**
@@ -81,6 +82,10 @@ class OCRService {
             $lastPageText = $totalPaginas > 1 
                 ? ($ocrResults[1]['text'] ?? '') 
                 : $firstPageText;
+            $lastPageLayoutText = $this->runSingleImageOCR($lastImagePath, '6');
+            if ($lastPageLayoutText !== '') {
+                $lastPageText = trim($lastPageText . "\n" . $lastPageLayoutText);
+            }
 
             return [
                 'archivo' => $archivo,
@@ -107,7 +112,8 @@ class OCRService {
     private function runOCR(array $imagePaths): array {
         // Construir el comando con las rutas de las imágenes
         $cmd = sprintf(
-            'python %s %s %s',
+            '%s %s %s %s',
+            escapeshellarg(PythonRuntime::executable()),
             escapeshellarg($this->pythonScriptPath),
             escapeshellarg($this->tesseractPath),
             escapeshellarg($this->tessdataDir)
@@ -148,6 +154,30 @@ class OCRService {
         }
 
         return $result['results'] ?? [];
+    }
+
+    private function runSingleImageOCR(string $imagePath, string $psm = '3'): string {
+        if (!file_exists($imagePath) || !file_exists($this->tesseractPath) || !is_dir($this->tessdataDir)) {
+            return '';
+        }
+
+        $cmd = sprintf(
+            '%s %s stdout --tessdata-dir %s -l spa+eng --psm %s --oem 3',
+            escapeshellarg($this->tesseractPath),
+            escapeshellarg($imagePath),
+            escapeshellarg($this->tessdataDir),
+            escapeshellarg($psm)
+        ) . ' 2>NUL';
+
+        $output = [];
+        $returnVar = 0;
+        exec($cmd, $output, $returnVar);
+
+        if ($returnVar !== 0) {
+            return '';
+        }
+
+        return trim(implode("\n", $output));
     }
 
     /**

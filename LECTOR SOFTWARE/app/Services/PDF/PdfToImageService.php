@@ -2,6 +2,7 @@
 
 namespace App\Services\PDF;
 
+use App\Helpers\PythonRuntime;
 use Exception;
 
 /**
@@ -45,7 +46,8 @@ class PdfToImageService {
 
         // Construir comando de ejecución seguro para llamar al script de Python
         $cmd = sprintf(
-            'python %s %s %s %s',
+            '%s %s %s %s %s',
+            escapeshellarg(PythonRuntime::executable()),
             escapeshellarg($this->pythonScriptPath),
             escapeshellarg($pdfPath),
             escapeshellarg($this->imagesDir),

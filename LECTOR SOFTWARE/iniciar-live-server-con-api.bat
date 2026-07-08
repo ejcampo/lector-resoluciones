@@ -1,6 +1,11 @@
 @echo off
 cd /d "%~dp0"
 set PHP_BIN=%~dp0.codex-temp\php-8.5.8-run\php.exe
+set CODEX_PYTHON=%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\python
+if exist "%CODEX_PYTHON%\python.exe" (
+    set PYTHON_EXE=%CODEX_PYTHON%\python.exe
+    set PATH=%CODEX_PYTHON%;%PATH%
+)
 
 netstat -ano | findstr ":5001 " | findstr "LISTENING" >nul
 if errorlevel 1 (

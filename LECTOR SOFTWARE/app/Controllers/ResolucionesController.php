@@ -35,10 +35,10 @@ class ResolucionesController {
         try {
             $pdo = DatabaseConnection::get();
             $stmt = $pdo->prepare('
-                SELECT archivo, numero_resolucion, primer_parrafo, firmante, estado, mensaje, imagen_firma, updated_at 
+                SELECT archivo, numero_resolucion, primer_parrafo, firmante, estado, mensaje, imagen_firma, actualizado_en AS updated_at 
                 FROM resoluciones_extraidas 
                 WHERE usuario_id = :usuario_id AND (confirmado = false OR confirmado IS NULL)
-                ORDER BY updated_at DESC
+                ORDER BY actualizado_en DESC
             ');
             $stmt->execute([':usuario_id' => $usuario_id]);
             $resoluciones = $stmt->fetchAll();
@@ -86,10 +86,10 @@ class ResolucionesController {
         try {
             $pdo = DatabaseConnection::get();
             $stmt = $pdo->prepare('
-                SELECT id, archivo, numero_resolucion, primer_parrafo, firmante, estado, mensaje, imagen_firma, updated_at 
+                SELECT id, archivo, numero_resolucion, primer_parrafo, firmante, estado, mensaje, imagen_firma, actualizado_en AS updated_at 
                 FROM resoluciones_extraidas 
                 WHERE usuario_id = :usuario_id AND confirmado = true
-                ORDER BY updated_at DESC
+                ORDER BY actualizado_en DESC
             ');
             $stmt->execute([':usuario_id' => $usuario_id]);
             $resoluciones = $stmt->fetchAll();

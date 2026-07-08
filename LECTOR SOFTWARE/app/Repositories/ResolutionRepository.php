@@ -48,7 +48,7 @@ class ResolutionRepository {
                 mensaje = EXCLUDED.mensaje,
                 usuario_id = EXCLUDED.usuario_id,
                 imagen_firma = EXCLUDED.imagen_firma,
-                updated_at = CURRENT_TIMESTAMP
+                actualizado_en = CURRENT_TIMESTAMP
         ';
 
         $stmt = $pdo->prepare($sql);
